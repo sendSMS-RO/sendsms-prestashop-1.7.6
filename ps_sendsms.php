@@ -309,10 +309,10 @@ class Ps_Sendsms extends Module
         }
 
         $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->name.'/count.js'
+            Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->name.'/views/js/count.js'
         );
         $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->name.'/buttons.js'
+            Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->name.'/views/js/buttons.js'
         );
 
         return $helper->generateForm($fields_form);

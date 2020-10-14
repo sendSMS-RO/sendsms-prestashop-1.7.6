@@ -107,27 +107,27 @@ class AdminCampaign extends ModuleAdminController
 
         # css
         $this->context->controller->addCSS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/datepicker/themes/default.css'
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/css/datepicker/css/default.css'
         );
         $this->context->controller->addCSS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/datepicker/themes/default.date.css'
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/css/datepicker/css/default.date.css'
         );
 
         # js
         $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/count.js'
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/count.js'
         );
         $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/datepicker/picker.js'
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/datepicker/picker.js'
         );
         $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/datepicker/picker.date.js'
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/datepicker/picker.date.js'
         );
         $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/datepicker.js'
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/datepicker-2.js'
         );
         $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/select2.js'
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/select2.js'
         );
 
         # jqueryui
@@ -255,6 +255,7 @@ class AdminCampaign extends ModuleAdminController
 
     private function filterPhones($periodStart, $periodEnd, $amount, $products, $billingStates)
     {
+        dump("Period start: " . $periodStart . " Period end: " . $periodEnd);
         $sql = new DbQuery();
         $sql->select('a.phone, a.phone_mobile');
         $sql->from('address', 'a');
@@ -263,7 +264,7 @@ class AdminCampaign extends ModuleAdminController
             $sql->where('o.date_add >= \''.$periodStart.' 00:00:00\'');
         }
         if (!empty($periodEnd)) {
-            $sql->where('o.date_add <= \''.$periodStart.' 23:59:59\'');
+            $sql->where('o.date_add <= \''.$periodEnd.' 23:59:59\'');
         }
         if (!empty($amount)) {
             $sql->where('o.total_paid_tax_incl >= '.(double)$amount);

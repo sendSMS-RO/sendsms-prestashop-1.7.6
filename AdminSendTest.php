@@ -53,7 +53,7 @@ class AdminSendTest extends ModuleAdminController
         }
 
         $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->module->name.'/count.js'
+            Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->module->name.'/views/js/count.js'
         );
 
         return parent::renderForm();

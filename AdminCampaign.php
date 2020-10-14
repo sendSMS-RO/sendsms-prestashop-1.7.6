@@ -37,7 +37,6 @@ class AdminCampaign extends ModuleAdminController
         $products = array_merge($products, $productsDb);
 
         $states = array();
-        $states[] = array('id_state' => 0, 'name' => '- toate -');
         $statesDb = $this->getListOfBillingStates();
         $states = array_merge($states, $statesDb);
         
@@ -71,8 +70,8 @@ class AdminCampaign extends ModuleAdminController
                 ),
                 array(
                     'type' => 'select',
-                    'label' => 'Produs cumparat',
-                    'name' => 'sendsms_product[]',
+                    'label' => 'Produs cumparat (lasati gol pentru toate produsele)',
+                    'name' => 'sendsms_products[]',
                     'multiple' => true,
                     'required' => false,
                     'options' => array(
@@ -84,14 +83,16 @@ class AdminCampaign extends ModuleAdminController
                 ),
                 array(
                     'type' => 'select',
-                    'label' => 'Judet facturare',
-                    'name' => 'sendsms_billing_state',
+                    'label' => 'Judet facturare (lasati gol pentru toate judetele)',
+                    'name' => 'sendsms_billing_states[]',
+                    'multiple' => true,
                     'required' => false,
                     'options' => array(
                         'query' => $states,
                         'id' => 'id_state',
                         'name' => 'name'
-                    )
+                    ),
+                    'class' => 'sendsms_statemanager'
                 )
             ),
             'submit' => array(
@@ -136,20 +137,24 @@ class AdminCampaign extends ModuleAdminController
         $periodEnd = strval(Tools::getValue('periodEnd'));
         $amount = strval(Tools::getValue('amount'));
         $products = Array();
+        $billingStates = Array();
 
         if(Configuration::hasKey('SENDSMS_PRODUCTS'))
         {
-            $products = explode('|', Configuration::get('SENDSMS_PRODUCTS'));
+            $products = Configuration::get('SENDSMS_PRODUCTS') ? explode('|', Configuration::get('SENDSMS_PRODUCTS')) : Array();
         }
-        $billingState = strval(Tools::getValue('billingState'));
-        $numbers = $this->filterPhones($periodStart, $periodEnd, $amount, $products, $billingState);
+        if(Configuration::hasKey('SENDSMS_STATES'))
+        {
+            $billingStates = Configuration::get('SENDSMS_STATES') ? explode('|', Configuration::get('SENDSMS_STATES')) : Array();
+        }
+        $numbers = $this->filterPhones($periodStart, $periodEnd, $amount, $products, $billingStates);
 
         # set form values
         $this->fields_value['sendsms_period_start'] = $periodStart;
         $this->fields_value['sendsms_period_end'] = $periodEnd;
         $this->fields_value['sendsms_amount'] = $amount;
-        $this->fields_value['sendsms_product[]'] = $products;
-        $this->fields_value['sendsms_billing_state'] = $billingState;
+        $this->fields_value['sendsms_products[]'] = $products;
+        $this->fields_value['sendsms_billing_states[]'] = $billingStates;
 
         $form1 = parent::renderForm();
 
@@ -219,7 +224,6 @@ class AdminCampaign extends ModuleAdminController
             $periodStart = strval(Tools::getValue('sendsms_period_start'));
             $periodEnd = strval(Tools::getValue('sendsms_period_end'));
             $amount = strval(Tools::getValue('sendsms_amount'));
-            $billingState = strval(Tools::getValue('sendsms_billing_state'));
             $url = array();
             if (!empty($periodStart)) {
                 $url[] = 'periodStart='.urlencode($periodStart);
@@ -230,16 +234,27 @@ class AdminCampaign extends ModuleAdminController
             if (!empty($amount)) {
                 $url[] = 'amount='.urlencode($amount);
             }
-            $url[] = 'billingState='.urlencode($billingState);
-            Configuration::updateValue('SENDSMS_PRODUCTS', implode("|", Tools::getValue('sendsms_product')), true);
+            if(Tools::getValue('sendsms_products'))
+            {
+                Configuration::updateValue('SENDSMS_PRODUCTS', implode("|", Tools::getValue('sendsms_products')), true);
+            }else
+            {
+                Configuration::updateValue('SENDSMS_PRODUCTS', null);
+            }
+            if(Tools::getValue('sendsms_billing_states'))
+            {
+                Configuration::updateValue('SENDSMS_STATES', implode("|", Tools::getValue('sendsms_billing_states')), true);
+            }else
+            {
+                Configuration::updateValue('SENDSMS_STATES', null);
+            }
 
             Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token.'&'.implode('&', $url));
         }
     }
 
-    private function filterPhones($periodStart, $periodEnd, $amount, $products, $billingState)
+    private function filterPhones($periodStart, $periodEnd, $amount, $products, $billingStates)
     {
-        dump($products);
         $sql = new DbQuery();
         $sql->select('a.phone, a.phone_mobile');
         $sql->from('address', 'a');
@@ -267,8 +282,18 @@ class AdminCampaign extends ModuleAdminController
             $queryWhere .= ")";
             $sql->where($queryWhere);
         }
-        if (!empty($billingState)) {
-            $sql->where('a.id_state = '.(int)$billingState);
+        if (!empty($billingStates)) {
+            $queryWhere = 'a.id_state in (';
+            for($i = 0; $i < count($billingStates); $i++)
+            {
+                $queryWhere .= (int)$billingStates[$i];
+                if($i < count($billingStates) - 1)
+                {
+                    $queryWhere .= ",";
+                }
+            }
+            $queryWhere .= ")";
+            $sql->where($queryWhere);
         }
         $sql->where('CONCAT(a.phone, a.phone_mobile) <> \'\'');
         $values = Db::getInstance()->executeS($sql);

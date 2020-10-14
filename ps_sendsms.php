@@ -483,7 +483,7 @@ class Ps_Sendsms extends Module
             $curl = curl_init();
             curl_setopt($curl, CURLOPT_HEADER, 0);
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($curl, CURLOPT_URL, 'https://hub.sendsms.ro/json?action=message_send&username=' . $username . '&password=' . $password . '&from=' . $from . '&to=' . $phone . '&text=' . urlencode($message));
+            curl_setopt($curl, CURLOPT_URL, 'https://hub.sendsms.ro/json?action=message_send_gdpr&username=' . $username . '&password=' . $password . '&from=' . $from . '&to=' . $phone . '&text=' . urlencode($message). '&short=true');
             curl_setopt($curl, CURLOPT_HTTPHEADER, array("Connection: keep-alive"));
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 

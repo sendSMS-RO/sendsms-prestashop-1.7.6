@@ -6,7 +6,7 @@ Permite expedierea de notificari SMS personalizate privind statusul comenzii, , 
 Permite personalizarea campaniilor SMS la nivel de : produs cumparat, perioada, suma minima comanda.
 Posibilitatea de a trimite un SMS test catre orice numar (previzualizarea notificarii ce urmeaza a fi expediata).
 Posibilitatea de a trimite mesaje selectiv catre oricare dintre clientii care au plasat comenzi pe site. De exemplu, in editarea statusului unui SMS de tip "Comanda finalizata" puteti include un cupon de reducere de 10% la urmatoarea comanda. Fiti creativi, iar vanzarile va vor depasi asteptarile !
-Modul compatibil cu ultimele versiuni PrestaShop.
+Modul compatibil versiunile Prestashop de pana in 1.7.6
 Echipa SendSMS.ro iti ofera asistenta gratuita, atat la instalare, cat si post-vanzare.
 Din rubrica „Modules” a paginii de administrare, incarcati fisierul .zip descarcat.
 Cand incarcarea s-a finalizat, activati modulul.

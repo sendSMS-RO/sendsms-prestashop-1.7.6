@@ -374,7 +374,7 @@ class Ps_Sendsms extends Module
             ));
         }
 
-        return $this->display(__FILE__, 'admin_order_sendsms.tpl');
+        return $this->display(__FILE__, '/views/templates/admin/admin_order_sendsms.tpl');
     }
 
     public function hookDisplayOrderConfirmation($params)

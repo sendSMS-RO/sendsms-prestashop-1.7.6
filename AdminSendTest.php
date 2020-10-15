@@ -48,10 +48,6 @@ class AdminSendTest extends ModuleAdminController
             )
         );
 
-        if (!($obj = $this->loadObject(true))) {
-            return;
-        }
-
         $this->context->controller->addJS(
             Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->module->name.'/views/js/count.js'
         );
@@ -62,11 +58,11 @@ class AdminSendTest extends ModuleAdminController
     public function postProcess()
     {
         if (Tools::isSubmit('submitAdd'.$this->table)) {
-            $phone = strval(Tools::getValue('sendsms_phone'));
-            $message = strval(Tools::getValue('sendsms_message'));
+            $phone = (string)(Tools::getValue('sendsms_phone'));
+            $message = (string)(Tools::getValue('sendsms_message'));
             $phone = $this->module->validatePhone($phone);
             if (!empty($phone) && !empty($message)) {
-                $this->module->sendSms($phone, $message, 'test');
+                $this->module->sendSms($message, 'test', $phone);
                 Tools::redirectAdmin(self::$currentIndex.'&conf='.$this->index.'&token='.$this->token);
             } else {
                 $this->errors[] = Tools::displayError('Numarul de telefon nu este valid');

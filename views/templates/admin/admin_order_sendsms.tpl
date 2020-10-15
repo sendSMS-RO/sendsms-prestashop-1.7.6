@@ -5,7 +5,7 @@
         </div>
         {if isset($sendsms_msg)}
             <div class="alert {if ! $sendsms_error}alert-success{else}alert-danger{/if}">
-                {$sendsms_msg}
+                {$sendsms_msg|escape:'html_all':'utf-8'}
             </div>
         {/if}
         <div class="form-wrapper">

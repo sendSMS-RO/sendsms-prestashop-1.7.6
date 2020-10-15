@@ -38,7 +38,7 @@ class AdminCampaign extends ModuleAdminController
         $states = array();
         $statesDb = $this->getListOfBillingStates();
         $states = array_merge($states, $statesDb);
-        
+
         $this->fields_form = array(
             'legend' => array(
                 'title' => 'Filtrare clienti'
@@ -134,12 +134,10 @@ class AdminCampaign extends ModuleAdminController
         $products = array();
         $billingStates = array();
 
-        if (Configuration::hasKey('SENDSMS_PRODUCTS'))
-        {
+        if (Configuration::hasKey('SENDSMS_PRODUCTS')) {
             $products = Configuration::get('SENDSMS_PRODUCTS') ? explode('|', Configuration::get('SENDSMS_PRODUCTS')) : array();
         }
-        if (Configuration::hasKey('SENDSMS_STATES'))
-        {
+        if (Configuration::hasKey('SENDSMS_STATES')) {
             $billingStates = Configuration::get('SENDSMS_STATES') ? explode('|', Configuration::get('SENDSMS_STATES')) : array();
         }
         $numbers = $this->filterPhones($periodStart, $periodEnd, $amount, $products, $billingStates);
@@ -178,7 +176,7 @@ class AdminCampaign extends ModuleAdminController
                         'id' => 'phone',
                         'name' => 'label'
                     ),
-                    'desc' => count($numbers).' numere de telefon'
+                    'desc' => count($numbers) . ' numere de telefon'
                 )
             ),
             'submit' => array(
@@ -190,7 +188,7 @@ class AdminCampaign extends ModuleAdminController
 
         $form2 = parent::renderForm();
 
-        return $form1.$form2;
+        return $form1 . $form2;
     }
 
     public function postProcess()
@@ -201,7 +199,7 @@ class AdminCampaign extends ModuleAdminController
             $back = $_SERVER['HTTP_REFERER'];
             if (empty($message) || empty($phones)) {
                 if (!empty($back)) {
-                    Tools::redirectAdmin($back.'&error=1');
+                    Tools::redirectAdmin($back . '&error=1');
                 } else {
                     Tools::redirectAdmin(self::$currentIndex . '&error=1&token=' . $this->token);
                 }
@@ -213,7 +211,7 @@ class AdminCampaign extends ModuleAdminController
                         $this->module->sendSms($message, 'campaign', $phone);
                     }
                 }
-                Tools::redirectAdmin(self::$currentIndex.'&sent=1&token='.$this->token);
+                Tools::redirectAdmin(self::$currentIndex . '&sent=1&token=' . $this->token);
             }
         } elseif (Tools::isSubmit('submitAdd' . $this->table)) {
             $periodStart = (string)(Tools::getValue('sendsms_period_start'));
@@ -221,30 +219,26 @@ class AdminCampaign extends ModuleAdminController
             $amount = (string)(Tools::getValue('sendsms_amount'));
             $url = array();
             if (!empty($periodStart)) {
-                $url[] = 'periodStart='.urlencode($periodStart);
+                $url[] = 'periodStart=' . urlencode($periodStart);
             }
             if (!empty($periodEnd)) {
-                $url[] = 'periodEnd='.urlencode($periodEnd);
+                $url[] = 'periodEnd=' . urlencode($periodEnd);
             }
             if (!empty($amount)) {
-                $url[] = 'amount='.urlencode($amount);
+                $url[] = 'amount=' . urlencode($amount);
             }
-            if (Tools::getValue('sendsms_products'))
-            {
+            if (Tools::getValue('sendsms_products')) {
                 Configuration::updateValue('SENDSMS_PRODUCTS', implode("|", Tools::getValue('sendsms_products')), true);
-            } else
-            {
+            } else {
                 Configuration::updateValue('SENDSMS_PRODUCTS', null);
             }
-            if (Tools::getValue('sendsms_billing_states'))
-            {
+            if (Tools::getValue('sendsms_billing_states')) {
                 Configuration::updateValue('SENDSMS_STATES', implode("|", Tools::getValue('sendsms_billing_states')), true);
-            } else
-            {
+            } else {
                 Configuration::updateValue('SENDSMS_STATES', null);
             }
 
-            Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token.'&'.implode('&', $url));
+            Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token . '&' . implode('&', $url));
         }
     }
 
@@ -255,22 +249,20 @@ class AdminCampaign extends ModuleAdminController
         $sql->from('address', 'a');
         $sql->innerJoin('orders', 'o', 'a.id_address = o.id_address_delivery');
         if (!empty($periodStart)) {
-            $sql->where('o.date_add >= \''.$periodStart.' 00:00:00\'');
+            $sql->where('o.date_add >= \'' . $periodStart . ' 00:00:00\'');
         }
         if (!empty($periodEnd)) {
-            $sql->where('o.date_add <= \''.$periodEnd.' 23:59:59\'');
+            $sql->where('o.date_add <= \'' . $periodEnd . ' 23:59:59\'');
         }
         if (!empty($amount)) {
-            $sql->where('o.total_paid_tax_incl >= '.(double)$amount);
+            $sql->where('o.total_paid_tax_incl >= ' . (float)$amount);
         }
         if (!empty($products)) {
             $sql->innerJoin('order_detail', 'od', 'od.id_order = o.id_order');
             $queryWhere = 'od.product_id in (';
-            for ($i = 0; $i < count($products); $i++)
-            {
+            for ($i = 0; $i < count($products); $i++) {
                 $queryWhere .= (int)$products[$i];
-                if ($i < count($products) - 1)
-                {
+                if ($i < count($products) - 1) {
                     $queryWhere .= ",";
                 }
             }
@@ -279,11 +271,9 @@ class AdminCampaign extends ModuleAdminController
         }
         if (!empty($billingStates)) {
             $queryWhere = 'a.id_state in (';
-            for ($i = 0; $i < count($billingStates); $i++)
-            {
+            for ($i = 0; $i < count($billingStates); $i++) {
                 $queryWhere .= (int)$billingStates[$i];
-                if ($i < count($billingStates) - 1)
-                {
+                if ($i < count($billingStates) - 1) {
                     $queryWhere .= ",";
                 }
             }
@@ -315,7 +305,7 @@ class AdminCampaign extends ModuleAdminController
         $sql = new DbQuery();
         $sql->select('id_product, name');
         $sql->from('product_lang');
-        $sql->where('id_lang = '.$default_lang.' AND name <> \'\'');
+        $sql->where('id_lang = ' . $default_lang . ' AND name <> \'\'');
         $sql->orderBy('name ASC');
         return Db::getInstance()->executeS($sql);
     }

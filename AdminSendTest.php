@@ -14,8 +14,8 @@ class AdminSendTest extends ModuleAdminController
 
         parent::__construct();
 
-        $this->index = count($this->_conf)+1;
-        $this->_conf[$this->index]='Mesajul a fost trimis';
+        $this->index = count($this->_conf) + 1;
+        $this->_conf[$this->index] = 'Mesajul a fost trimis';
     }
 
     public function renderForm()
@@ -49,7 +49,7 @@ class AdminSendTest extends ModuleAdminController
         );
 
         $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->module->name.'/views/js/count.js'
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/count.js'
         );
 
         return parent::renderForm();
@@ -57,13 +57,13 @@ class AdminSendTest extends ModuleAdminController
 
     public function postProcess()
     {
-        if (Tools::isSubmit('submitAdd'.$this->table)) {
+        if (Tools::isSubmit('submitAdd' . $this->table)) {
             $phone = (string)(Tools::getValue('sendsms_phone'));
             $message = (string)(Tools::getValue('sendsms_message'));
             $phone = $this->module->validatePhone($phone);
             if (!empty($phone) && !empty($message)) {
                 $this->module->sendSms($message, 'test', $phone);
-                Tools::redirectAdmin(self::$currentIndex.'&conf='.$this->index.'&token='.$this->token);
+                Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token);
             } else {
                 $this->errors[] = Tools::displayError('Numarul de telefon nu este valid');
             }

@@ -3,9 +3,9 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
-class Ps_Sendsms extends Module
+class Ps_SendSMS extends Module
 {
-    
+
 
     protected $configValues = array(
         'PS_SENDSMS_USERNAME',
@@ -40,10 +40,10 @@ class Ps_Sendsms extends Module
 
     private function installDb()
     {
-        Db::getInstance()->Execute('DROP TABLE IF EXISTS `'._DB_PREFIX_.'ps_sendsms_history`;');
+        Db::getInstance()->Execute('DROP TABLE IF EXISTS `' . _DB_PREFIX_ . 'ps_sendsms_history`;');
 
         if (!Db::getInstance()->Execute('
-            CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.'ps_sendsms_history` (
+            CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'ps_sendsms_history` (
             `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
             `phone` varchar(255) DEFAULT NULL,
             `status` varchar(255) DEFAULT NULL,
@@ -53,8 +53,7 @@ class Ps_Sendsms extends Module
             `type` varchar(255) DEFAULT NULL,
             `sent_on` datetime DEFAULT NULL,
             PRIMARY KEY (`id`)
-            ) ENGINE='._MYSQL_ENGINE_.' DEFAULT CHARSET=utf8')
-        ) {
+            ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8')) {
             return false;
         }
         return true;
@@ -62,7 +61,7 @@ class Ps_Sendsms extends Module
 
     private function uninstallDb()
     {
-        if (!Db::getInstance()->Execute('DROP TABLE `'._DB_PREFIX_.'ps_sendsms_history`;')) {
+        if (!Db::getInstance()->Execute('DROP TABLE `' . _DB_PREFIX_ . 'ps_sendsms_history`;')) {
             return false;
         }
         return true;
@@ -136,7 +135,7 @@ class Ps_Sendsms extends Module
     public function getContent()
     {
         $output = null;
-        if (Tools::isSubmit('submit'.$this->name)) {
+        if (Tools::isSubmit('submit' . $this->name)) {
             # get info
             $username = (string)(Tools::getValue('PS_SENDSMS_USERNAME'));
             $password = (string)(Tools::getValue('PS_SENDSMS_PASSWORD'));
@@ -147,7 +146,7 @@ class Ps_Sendsms extends Module
 
             $orderStatuses = OrderState::getOrderStates($this->context->language->id);
             foreach ($orderStatuses as $status) {
-                $statuses[$status['id_order_state']] = (string)(Tools::getValue('PS_SENDSMS_STATUS_'.$status['id_order_state']));
+                $statuses[$status['id_order_state']] = (string)(Tools::getValue('PS_SENDSMS_STATUS_' . $status['id_order_state']));
             }
 
             # validate and update settings
@@ -165,12 +164,12 @@ class Ps_Sendsms extends Module
                     Configuration::updateValue('PS_SENDSMS_PASSWORD', $password);
                 }
                 Configuration::updateValue('PS_SENDSMS_LABEL', $label);
-                Configuration::updateValue('PS_SENDSMS_SIMULATION', !empty($isSimulation)?1:0);
+                Configuration::updateValue('PS_SENDSMS_SIMULATION', !empty($isSimulation) ? 1 : 0);
                 Configuration::updateValue('PS_SENDSMS_STATUS', serialize($statuses));
                 $output .= $this->displayConfirmation($this->l('Setarile au fost actualizate'));
             }
         }
-        return $output.$this->displayForm();
+        return $output . $this->displayForm();
     }
 
     public function displayForm()
@@ -247,25 +246,25 @@ class Ps_Sendsms extends Module
             $this->fields_form[0]['form']['input'][] = array(
                 'type' => 'textarea',
                 'rows' => 7,
-                'label' => $this->l('Mesaj: ').'<strong>'.$status['name'].'</strong>'.'<br /><br />'.$this->l('Variabile disponibile:'). '<button type="button" class="ps_sendsms_button">{billing_first_name}</button> 
+                'label' => $this->l('Mesaj: ') . '<strong>' . $status['name'] . '</strong>' . '<br /><br />' . $this->l('Variabile disponibile:') . '<button type="button" class="ps_sendsms_button">{billing_first_name}</button> 
                     <button type="button" class="ps_sendsms_button">{billing_last_name}</button> 
                     <button type="button" class="ps_sendsms_button">{shipping_first_name}</button> 
                     <button type="button" class="ps_sendsms_button">{shipping_last_name}</button>
                     <button type="button" class="ps_sendsms_button">{tracking_number}</button> 
                     <button type="button" class="ps_sendsms_button">{order_number}</button> 
                     <button type="button" class="ps_sendsms_button">{order_date}</button> 
-                    <button type="button" class="ps_sendsms_button">{order_total}</button>'.'<br /><br />'.$this->l('Lasati campul gol daca nu doriti sa trimiteti SMS pentru acest status.'),
-                'name' => 'PS_SENDSMS_STATUS_'.$status['id_order_state'],
+                    <button type="button" class="ps_sendsms_button">{order_total}</button>' . '<br /><br />' . $this->l('Lasati campul gol daca nu doriti sa trimiteti SMS pentru acest status.'),
+                'name' => 'PS_SENDSMS_STATUS_' . $status['id_order_state'],
                 'required' => false,
                 'class' => 'ps_sendsms_content',
-                'desc' => '<div>'.(isset($defaults[$status['id_order_state']])?'Ex: '.$defaults[$status['id_order_state']]:'').'</div>'
+                'desc' => '<div>' . (isset($defaults[$status['id_order_state']]) ? 'Ex: ' . $defaults[$status['id_order_state']] : '') . '</div>'
             );
         }
 
         # add submit button
         $this->fields_form[0]['form']['submit'] = array(
-                'title' => $this->l('Save'),
-                'class' => 'btn btn-default pull-right'
+            'title' => $this->l('Save'),
+            'class' => 'btn btn-default pull-right'
         );
 
         $helper = new HelperForm();
@@ -274,7 +273,7 @@ class Ps_Sendsms extends Module
         $helper->module = $this;
         $helper->name_controller = $this->name;
         $helper->token = Tools::getAdminTokenLite('AdminModules');
-        $helper->currentIndex = AdminController::$currentIndex.'&configure='.$this->name;
+        $helper->currentIndex = AdminController::$currentIndex . '&configure=' . $this->name;
 
         // Language
         $helper->default_form_language = $default_lang;
@@ -284,16 +283,16 @@ class Ps_Sendsms extends Module
         $helper->title = $this->displayName;
         $helper->show_toolbar = true;        // false -> remove toolbar
         $helper->toolbar_scroll = true;      // yes - > Toolbar is always visible on the top of the screen.
-        $helper->submit_action = 'submit'.$this->name;
+        $helper->submit_action = 'submit' . $this->name;
         $helper->toolbar_btn = array(
             'save' =>
             array(
                 'desc' => $this->l('Save'),
-                'href' => AdminController::$currentIndex.'&configure='.$this->name.'&save'.$this->name.
-                '&token='.Tools::getAdminTokenLite('AdminModules'),
+                'href' => AdminController::$currentIndex . '&configure=' . $this->name . '&save' . $this->name .
+                    '&token=' . Tools::getAdminTokenLite('AdminModules'),
             ),
             'back' => array(
-                'href' => AdminController::$currentIndex.'&token='.Tools::getAdminTokenLite('AdminModules'),
+                'href' => AdminController::$currentIndex . '&token=' . Tools::getAdminTokenLite('AdminModules'),
                 'desc' => $this->l('Back to list')
             )
         );
@@ -306,14 +305,14 @@ class Ps_Sendsms extends Module
         $helper->fields_value['PS_SENDSMS_SIMULATION_PHONE'] = Configuration::get('PS_SENDSMS_SIMULATION_PHONE');
         $statuses = unserialize(Configuration::get('PS_SENDSMS_STATUS'));
         foreach ($orderStatuses as $status) {
-            $helper->fields_value['PS_SENDSMS_STATUS_'.$status['id_order_state']] = isset($statuses[$status['id_order_state']]) ? $statuses[$status['id_order_state']] : '';
+            $helper->fields_value['PS_SENDSMS_STATUS_' . $status['id_order_state']] = isset($statuses[$status['id_order_state']]) ? $statuses[$status['id_order_state']] : '';
         }
 
         $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->name.'/views/js/count.js'
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->name . '/views/js/count.js'
         );
         $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.'modules/'.$this->name.'/views/js/buttons.js'
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->name . '/views/js/buttons.js'
         );
 
         return $helper->generateForm($this->fields_form);
@@ -326,8 +325,8 @@ class Ps_Sendsms extends Module
         }
 
         if (Tools::isSubmit('submitsendsms_order')) {
-            require_once _PS_CLASS_DIR_.'order/Order.php';
-            require_once _PS_CLASS_DIR_.'Customer.php';
+            require_once _PS_CLASS_DIR_ . 'order/Order.php';
+            require_once _PS_CLASS_DIR_ . 'Customer.php';
             $id_order = (int)$params['id_order'];
             $order = new Order($id_order);
             $customer = new Customer((int)$order->id_customer);
@@ -341,8 +340,8 @@ class Ps_Sendsms extends Module
                 $msg_error = false;
 
                 # add message
-                require_once _PS_CLASS_DIR_.'CustomerMessage.php';
-                require_once _PS_CLASS_DIR_.'CustomerThread.php';
+                require_once _PS_CLASS_DIR_ . 'CustomerMessage.php';
+                require_once _PS_CLASS_DIR_ . 'CustomerThread.php';
                 //check if a thread already exist
                 $id_customer_thread = CustomerThread::getIdCustomerThreadByEmailAndIdOrder($customer->email, $order->id);
                 if (!$id_customer_thread) {
@@ -362,7 +361,7 @@ class Ps_Sendsms extends Module
                 $customer_message = new CustomerMessage();
                 $customer_message->id_customer_thread = $customer_thread->id;
                 $customer_message->id_employee = (int)$this->context->employee->id;
-                $customer_message->message = 'Mesaj SMS trimis catre '.$phone.': '.$message;
+                $customer_message->message = 'Mesaj SMS trimis catre ' . $phone . ': ' . $message;
                 $customer_message->private = 1;
                 $customer_message->add();
             } else {
@@ -402,7 +401,7 @@ class Ps_Sendsms extends Module
             $shippingAddress = new Address($order->id_address_delivery);
             $order_carrier = new OrderCarrier((int)$order->getIdOrderCarrier());
             $shipping_number = $order_carrier->tracking_number;
-            if (empty($shipping_number)){
+            if (empty($shipping_number)) {
                 $shipping_number = $order->shipping_number;
             }
 
@@ -448,9 +447,9 @@ class Ps_Sendsms extends Module
     {
         $phone = preg_replace('/\D/', '', $phone);
         if (Tools::substr($phone, 0, 1) == '0' && Tools::strlen($phone) == 10) {
-            $phone = '4'.$phone;
+            $phone = '4' . $phone;
         } elseif (Tools::substr($phone, 0, 1) != '0' && Tools::strlen($phone) == 9) {
-            $phone = '40'.$phone;
+            $phone = '40' . $phone;
         } elseif (Tools::strlen($phone) == 13 && Tools::substr($phone, 0, 2) == '00') {
             $phone = Tools::substr($phone, 2);
         }
@@ -484,7 +483,7 @@ class Ps_Sendsms extends Module
             $curl = curl_init();
             curl_setopt($curl, CURLOPT_HEADER, 0);
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($curl, CURLOPT_URL, 'https://hub.sendsms.ro/json?action=message_send_gdpr&username=' . $username . '&password=' . $password . '&from=' . $from . '&to=' . $phone . '&text=' . urlencode($message). '&short=true');
+            curl_setopt($curl, CURLOPT_URL, 'https://hub.sendsms.ro/json?action=message_send_gdpr&username=' . $username . '&password=' . $password . '&from=' . $from . '&to=' . $phone . '&text=' . urlencode($message) . '&short=true');
             curl_setopt($curl, CURLOPT_HTTPHEADER, array("Connection: keep-alive"));
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 
@@ -523,7 +522,8 @@ class Ps_Sendsms extends Module
             "\xC5\xA3",
             "\xC3\xA3",
             "\xC2\xAD",
-            "\xe2\x80\x93");
+            "\xe2\x80\x93"
+        );
         $cleanLetters = array("A", "a", "A", "a", "I", "i", "S", "s", "T", "t", "S", "s", "T", "t", "a", " ", "-");
         return str_replace($balarii, $cleanLetters, $string);
     }

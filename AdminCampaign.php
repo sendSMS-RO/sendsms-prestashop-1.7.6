@@ -219,7 +219,7 @@ class AdminCampaign extends ModuleAdminController
             } else {
                 # send sms
                 foreach ($phones as $phone) {
-                    $phone = $this->module->validatePhone($phone);
+                    $phone = Validate::isPhoneNumber($phone) ? $phone : "";
                     if (!empty($phone)) {
                         $this->module->sendSms($message, 'campaign', $phone);
                     }

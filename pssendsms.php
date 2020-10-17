@@ -36,18 +36,18 @@ class PsSendSMS extends Module
         $this->version = '1.0.4';
         $this->author = 'Any Place Media SRL';
         $this->need_instance = 0;
-        $this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
+        $this->ps_versions_compliancy = array('min' => '1.6', 'max' => '1.7.6');
         $this->bootstrap = true;
 
         parent::__construct();
 
         $this->displayName = $this->l('SendSMS');
-        $this->description = $this->l('Folositi solutia noastra de expedieri SMS pentru a livra informatia corecta la momentul potrivit.');
+        $this->description = $this->l('Use our SMS shipping solution to deliver the right information at the right time.');
 
-        $this->confirmUninstall = $this->l('Sunteti sigur ca doriti sa dezinstalati?');
+        $this->confirmUninstall = $this->l('Are you sure you want to uninstall?');
 
         if (!Configuration::get('PS_SENDSMS_USERNAME') || !Configuration::get('PS_SENDSMS_PASSWORD')) {
-            $this->warning = $this->l('Nu au fost setate numele de utilizator si/sau parola');
+            $this->warning = $this->l('No username and / or password was set');
         }
     }
 
@@ -152,7 +152,7 @@ class PsSendSMS extends Module
         $this->uninstallModuleTab('AdminHistory');
         $this->uninstallModuleTab('AdminCampaign');
         $this->uninstallModuleTab('AdminSendTest');
-        
+
         return parent::disable($force_all);
     }
 
@@ -378,7 +378,7 @@ class PsSendSMS extends Module
 
             $phone = (string)(Tools::getValue('sendsms_phone'));
             $message = (string)(Tools::getValue('sendsms_message'));
-            $phone = $this->validatePhone($phone);
+            $phone = Validate::isPhoneNumber($phone) ? $phone : "";
             if (!empty($phone) && !empty($message)) {
                 $this->sendSms($message, 'single order', $phone);
                 $msg = 'Mesajul a fost trimis';
@@ -451,7 +451,7 @@ class PsSendSMS extends Module
             }
 
             # get billing phone number
-            $phone = $this->validatePhone($this->selectPhone($billingAddress->phone, $billingAddress->phone_mobile));
+            $phone = Validate::isPhoneNumber($this->selectPhone($billingAddress->phone, $billingAddress->phone_mobile)) ? $phone : "";
 
             # transform variables
             $message = $statuses[$statusId];
@@ -488,28 +488,13 @@ class PsSendSMS extends Module
         return $phone;
     }
 
-    public function validatePhone($phone)
-    {
-        $phone = preg_replace('/\D/', '', $phone);
-        if (Tools::substr($phone, 0, 1) == '0' && Tools::strlen($phone) == 10) {
-            $phone = '4' . $phone;
-        } elseif (Tools::substr($phone, 0, 1) != '0' && Tools::strlen($phone) == 9) {
-            $phone = '40' . $phone;
-        } elseif (Tools::strlen($phone) == 13 && Tools::substr($phone, 0, 2) == '00') {
-            $phone = Tools::substr($phone, 2);
-        }
-        if (Tools::strlen($phone) < 11) {
-            return false;
-        }
-        return $phone;
-    }
-
     public function sendSms($message, $type = 'order', $phone = '')
     {
+        $phone = preg_replace("/[^0-9]/", "", $phone );
         $username = Configuration::get('PS_SENDSMS_USERNAME');
         $password = Configuration::get('PS_SENDSMS_PASSWORD');
         $isSimulation = Configuration::get('PS_SENDSMS_SIMULATION');
-        $simulationPhone = $this->validatePhone(Configuration::get('PS_SENDSMS_SIMULATION_PHONE'));
+        $simulationPhone = Validate::isPhoneNumber(Configuration::get('PS_SENDSMS_SIMULATION_PHONE')) ? $phone : "";
         $from = Configuration::get('PS_SENDSMS_LABEL');
         if (empty($username) || empty($password)) {
             return false;

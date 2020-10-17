@@ -124,6 +124,38 @@ class PsSendSMS extends Module
         return true;
     }
 
+    public function enable($force_all = false)
+    {
+        $tabNames = array();
+        $result = Db::getInstance()->ExecuteS("SELECT * FROM " . _DB_PREFIX_ . "lang order by id_lang");
+        if (is_array($result)) {
+            foreach ($result as $row) {
+                $tabNames['main'][$row['id_lang']] = 'SendSMS';
+                $tabNames['history'][$row['id_lang']] = 'Istoric';
+                $tabNames['campaign'][$row['id_lang']] = 'Campanie';
+                $tabNames['test'][$row['id_lang']] = 'Trimitere test';
+            }
+        }
+        $idTab = Tab::getIdFromClassName("IMPROVE");
+        $this->installModuleTab('SendSMSTab', $tabNames['main'], $idTab);
+        $idTab = Tab::getIdFromClassName("SendSMSTab");
+        $this->installModuleTab('AdminHistory', $tabNames['history'], $idTab);
+        $this->installModuleTab('AdminCampaign', $tabNames['campaign'], $idTab);
+        $this->installModuleTab('AdminSendTest', $tabNames['test'], $idTab);
+
+        return parent::enable($force_all);
+    }
+
+    public function disable($force_all = false)
+    {
+        $this->uninstallModuleTab('SendSMSTab');
+        $this->uninstallModuleTab('AdminHistory');
+        $this->uninstallModuleTab('AdminCampaign');
+        $this->uninstallModuleTab('AdminSendTest');
+        
+        return parent::disable($force_all);
+    }
+
     public function uninstall()
     {
         if (!parent::uninstall() || !$this->uninstallDb()) {

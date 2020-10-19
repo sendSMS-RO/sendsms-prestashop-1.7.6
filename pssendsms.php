@@ -131,9 +131,9 @@ class PsSendSMS extends Module
         if (is_array($result)) {
             foreach ($result as $row) {
                 $tabNames['main'][$row['id_lang']] = 'SendSMS';
-                $tabNames['history'][$row['id_lang']] = 'Istoric';
-                $tabNames['campaign'][$row['id_lang']] = 'Campanie';
-                $tabNames['test'][$row['id_lang']] = 'Trimitere test';
+                $tabNames['history'][$row['id_lang']] =  $this->l('History');
+                $tabNames['campaign'][$row['id_lang']] =  $this->l('Campaign');
+                $tabNames['test'][$row['id_lang']] =  $this->l('Send a test');
             }
         }
         $idTab = Tab::getIdFromClassName("IMPROVE");
@@ -196,11 +196,11 @@ class PsSendSMS extends Module
 
             # validate and update settings
             if (empty($username) || empty($label) || (empty($password) && !Configuration::get('PS_SENDSMS_PASSWORD'))) {
-                $output .= $this->displayError($this->l('Trebuie sa completati numele de utilizator, parola si label expeditor'));
+                $output .= $this->displayError($this->l('You must complete your username, password, and sender label'));
             } else {
                 # validate phone number
                 if (!empty($simulationPhone) && !Validate::isPhoneNumber($simulationPhone)) {
-                    $output .= $this->displayError($this->l('Numarul de telefon nu este valid'));
+                    $output .= $this->displayError($this->l('Phone number is invalid'));
                 } else {
                     Configuration::updateValue('PS_SENDSMS_SIMULATION_PHONE', $simulationPhone);
                 }
@@ -211,7 +211,7 @@ class PsSendSMS extends Module
                 Configuration::updateValue('PS_SENDSMS_LABEL', $label);
                 Configuration::updateValue('PS_SENDSMS_SIMULATION', !empty($isSimulation) ? 1 : 0);
                 Configuration::updateValue('PS_SENDSMS_STATUS', serialize($statuses));
-                $output .= $this->displayConfirmation($this->l('Setarile au fost actualizate'));
+                $output .= $this->displayConfirmation($this->l('The settings have been updated'));
             }
         }
         return $output . $this->displayForm();
@@ -230,28 +230,28 @@ class PsSendSMS extends Module
             'input' => array(
                 array(
                     'type' => 'text',
-                    'label' => $this->l('Nume utilizator'),
+                    'label' => $this->l('User name'),
                     'name' => 'PS_SENDSMS_USERNAME',
                     'required' => true,
-                    'desc' => 'Nu aveți cont sendSMS? Înregistrați-vă GRATUIT <a href="https://hub.sendsms.ro/login" target="_blank">aici</a>. Mai multe detalii despre sendSMS puteți afla <a href="http://www.sendsms.ro/ro" target="_blank">aici</a>.'
+                    'desc' => $this->l('Don\'t have sendSMS account? Sign up for FREE ') . '<a href="https://hub.sendsms.ro/en/login" target="_blank">' . $this->l('here') . '</a>.' . $this->l('You can find more details about sendSMS ') . '<a href="http://www.sendsms.ro/en" target="_blank">' . $this->l('here') . '</a>.'
                 ),
                 array(
                     'type' => 'password',
-                    'label' => $this->l('Parola/Cheie API'),
+                    'label' => $this->l('Password / API Key'),
                     'name' => 'PS_SENDSMS_PASSWORD',
                     'required' => true
                 ),
                 array(
                     'type' => 'text',
-                    'label' => $this->l('Label expeditor'),
+                    'label' => $this->l('Shipper label'),
                     'name' => 'PS_SENDSMS_LABEL',
                     'required' => true,
-                    'desc' => 'maxim 11 caractere alfa numerice',
+                    'desc' => $this->l('maximum 11 numeric alpha characters'),
                     'maxlength' => 11
                 ),
                 array(
                     'type' => 'checkbox',
-                    'label' => $this->l('Simulare trimitere SMS'),
+                    'label' => $this->l('SMS sending simulation'),
                     'name' => 'PS_SENDSMS_SIMULATION',
                     'required' => false,
                     'values' => array(
@@ -266,7 +266,7 @@ class PsSendSMS extends Module
                 ),
                 array(
                     'type' => 'text',
-                    'label' => $this->l('Numar telefon simulare'),
+                    'label' => $this->l('Simulation phone number'),
                     'name' => 'PS_SENDSMS_SIMULATION_PHONE',
                     'required' => false
                 )
@@ -275,34 +275,34 @@ class PsSendSMS extends Module
 
         # add order statuses to options
         $defaults = array(
-            10 => 'Comanda numesite.ro cu numarul {order_name} a fost procesata si asteapta plata in valoare totala de {order_total} RON. Info: 0722xxxxxx',
-            14 => 'Comanda numesite.ro cu numarul {order_name} a fost procesata in sistem ramburs. Suma totala de plata este {order_total} RON. Info: 0722xxxxxx',
-            1 => 'Comanda numesite.ro cu numarul {order_name} a fost procesata si asteapta plata in valoare totala de {order_total} RON. Info: 0722xxxxxx',
-            11 => 'Comanda numesite.ro cu numarul {order_name} a fost procesata si asteapta si asteaptam confirmarea PayPal. Info: 0722xxxxxx',
-            6 => 'Comanda numesite.ro cu numarul {order_name} a fost anulata - motivul fiind : lipsa stoc / termen de livrare mai mare de 10 zile. Info: 07xxxxxxxx',
-            5 => 'Comanda numesite.ro cu numarul {order_name} in valoare de {order_total} RON a fost predata catre curier si va fi livrata in maxim 24 ore. Info: 07xxxxxxxx',
-            2 => 'Plata pentru comanda cu numarul {order_name} in valoare de {order_total} RON a fost aceptata! Info: 07xxxxxxxx',
-            8 => 'Am intampinat o eroare in procesarea platii Dvs pentru comanda NumeSite.ro cu numarul {order_name} in valoare de {order_total} RON Info: 07xxxxxxxx',
-            7 => 'Valoarea comenzii NumeSite.ro cu numarul {order_number}  in valoare de {order_total} RON a fost restituita! Info: 07xxxxxxxx',
-            4 => 'Comanda cu numarul {order_number} in valoare de {order_total} RON a fost predata catre curier si va fi livrata in maxim 24 ore. Info: 07xxxxxxxx'
+            10 => $this->l('The order sitename.com with the number {order_name} has been processed and is waiting for the payment in total value of {order_total}. Info: 0722xxxxxx'),
+            14 => $this->l('The order sitename.com with the number {order_name} has been processed in the refund system. The total payment amount is {order_total}. Info: 0722xxxxxx'),
+            1 => $this->l('The order sitename.com with the number {order_name} has been processed and is awaiting payment in full by {order_total}. Info: 0722xxxxxx'),
+            11 => $this->l('The order sitename.com with the number {order_name} has been processed and we are waiting and waiting for PayPal confirmation. Info: 0722xxxxxx'),
+            6 => $this->l('The order sitename.com with the number {order_name} has been canceled - the reason being: lack of stock / delivery time longer than 10 days. Info: 07xxxxxxxx'),
+            5 => $this->l('The order sitename.com with the number {order_name} worth {order_total} has been delivered to the courier and will be delivered within 24 hours. Info: 07xxxxxxxx'),
+            2 => $this->l('Payment for order number {order_name} of {order_total} has been accepted! Info: 07xxxxxxxx'),
+            8 => $this->l('We encountered an error processing your payment for the sitename.com order with the number {order_name} worth {order_total} Info: 07xxxxxxxx'),
+            7 => $this->l('The value of the sitename.com order with the number {order_number} of {order_total} has been returned! Info: 07xxxxxxxx'),
+            4 => $this->l('The order with the number {order_number} worth {order_total} has been delivered to the courier and will be delivered within 24 hours. Info: 07xxxxxxxx')
         );
         $orderStatuses = OrderState::getOrderStates($this->context->language->id);
         foreach ($orderStatuses as $status) {
             $this->fields_form[0]['form']['input'][] = array(
                 'type' => 'textarea',
                 'rows' => 7,
-                'label' => $this->l('Mesaj: ') . '<strong>' . $status['name'] . '</strong>' . '<br /><br />' . $this->l('Variabile disponibile:') . '<button type="button" class="ps_sendsms_button">{billing_first_name}</button> 
+                'label' => $this->l('Message: ') . '<stg>' . $status['name'] . '</stg>' . '<br /><br />' . $this->l('Available variables:') . '<button type="button" class="ps_sendsms_button">{billing_first_name}</button> 
                     <button type="button" class="ps_sendsms_button">{billing_last_name}</button> 
                     <button type="button" class="ps_sendsms_button">{shipping_first_name}</button> 
                     <button type="button" class="ps_sendsms_button">{shipping_last_name}</button>
                     <button type="button" class="ps_sendsms_button">{tracking_number}</button> 
                     <button type="button" class="ps_sendsms_button">{order_number}</button> 
                     <button type="button" class="ps_sendsms_button">{order_date}</button> 
-                    <button type="button" class="ps_sendsms_button">{order_total}</button>' . '<br /><br />' . $this->l('Lasati campul gol daca nu doriti sa trimiteti SMS pentru acest status.'),
+                    <button type="button" class="ps_sendsms_button">{order_total}</button>' . '<br /><br />' . $this->l('Leave the field blank if you do not want to send SMS for this status.'),
                 'name' => 'PS_SENDSMS_STATUS_' . $status['id_order_state'],
                 'required' => false,
                 'class' => 'ps_sendsms_content',
-                'desc' => '<div>' . (isset($defaults[$status['id_order_state']]) ? 'Ex: ' . $defaults[$status['id_order_state']] : '') . '</div>'
+                'desc' => '<div>' . (isset($defaults[$status['id_order_state']]) ? $this->l('Ex: ') . $defaults[$status['id_order_state']] : '') . '</div>'
             );
         }
 
@@ -381,7 +381,7 @@ class PsSendSMS extends Module
             $phone = Validate::isPhoneNumber($phone) ? $phone : "";
             if (!empty($phone) && !empty($message)) {
                 $this->sendSms($message, 'single order', $phone);
-                $msg = 'Mesajul a fost trimis';
+                $msg = $this->l('The message has been sent');
                 $msg_error = false;
 
                 # add message
@@ -406,11 +406,11 @@ class PsSendSMS extends Module
                 $customer_message = new CustomerMessage();
                 $customer_message->id_customer_thread = $customer_thread->id;
                 $customer_message->id_employee = (int)$this->context->employee->id;
-                $customer_message->message = 'Mesaj SMS trimis catre ' . $phone . ': ' . $message;
+                $customer_message->message = $this->l('The message has been sent to ') . $phone . ': ' . $message;
                 $customer_message->private = 1;
                 $customer_message->add();
             } else {
-                $msg = 'Numarul de telefon nu este valid';
+                $msg = $this->l('The phone number was invalid');
                 $msg_error = true;
             }
             $this->context->smarty->assign(array(
@@ -451,7 +451,9 @@ class PsSendSMS extends Module
             }
 
             # get billing phone number
-            $phone = Validate::isPhoneNumber($this->selectPhone($billingAddress->phone, $billingAddress->phone_mobile)) ? $phone : "";
+            $phone = Validate::isPhoneNumber($this->selectPhone($billingAddress->phone, $billingAddress->phone_mobile)) ? $this->selectPhone($billingAddress->phone, $billingAddress->phone_mobile) : "";
+            
+            $currency = new Currency($order->id_currency);
 
             # transform variables
             $message = $statuses[$statusId];
@@ -463,7 +465,7 @@ class PsSendSMS extends Module
                 '{order_number}' => $order->reference,
                 '{tracking_number}' => $shipping_number,
                 '{order_date}' => date('d.m.Y', strtotime($order->date_add)),
-                '{order_total}' => number_format($order->total_paid, 2, '.', '')
+                '{order_total}' => number_format($order->total_paid, 2, '.', '') . " " . $currency->sign
             );
             foreach ($replace as $key => $value) {
                 $message = str_replace($key, $value, $message);

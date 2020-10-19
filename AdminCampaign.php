@@ -18,28 +18,28 @@ class AdminCampaign extends ModuleAdminController
 
     public function __construct()
     {
-        $this->table = 'sendsms_campaign';
-        $this->bootstrap = true;
-        $this->meta_title = 'Campanie SMS';
-        $this->display = 'add';
+        parent::__construct();
+
+        $this->bootstrap = true;       
 
         $this->context = Context::getContext();
+        $this->meta_title = $this->module->l('SMS Campaign');
+        $this->table = 'sendsms_campaign';
+        $this->display = 'add';
 
         $error = (string)(Tools::getValue('error'));
         if (!empty($error)) {
-            $this->errors = array('Trebuie sa alegeti cel putin un numar de telefon si sa introduceti un mesaj');
+            $this->errors = array($this->module->l('You must choose at least one phone number and enter a message'));
         }
 
         $sent = (string)(Tools::getValue('sent'));
         if (!empty($sent)) {
-            $this->confirmations = array('Mesajul a fost trimis');
+            $this->confirmations = array($this->module->l('The message was sent'));
         }
-
-        parent::__construct();
 
         $this->index = count($this->_conf) + 1;
 
-        $this->_conf[$this->index] = 'Clientii au fost filtrati';
+        $this->_conf[$this->index] = $this->module->l('Customers have been filtered');
     }
 
     public function renderForm()
@@ -206,7 +206,9 @@ class AdminCampaign extends ModuleAdminController
 
     public function postProcess()
     {
+        //dump($this);
         if (Tools::isSubmit('send')) {
+            dump("Aici = 1");
             $message = (string)(Tools::getValue('sendsms_message'));
             $phones = Tools::getValue('sendsms_phone_numbers');
             $back = $_SERVER['HTTP_REFERER'];
@@ -227,6 +229,7 @@ class AdminCampaign extends ModuleAdminController
                 Tools::redirectAdmin(self::$currentIndex . '&sent=1&token=' . $this->token);
             }
         } elseif (Tools::isSubmit('submitAdd' . $this->table)) {
+            dump("Aici = 2");
             $periodStart = (string)(Tools::getValue('sendsms_period_start'));
             $periodEnd = (string)(Tools::getValue('sendsms_period_end'));
             $amount = (string)(Tools::getValue('sendsms_amount'));
@@ -253,6 +256,7 @@ class AdminCampaign extends ModuleAdminController
 
             Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token . '&' . implode('&', $url));
         }
+        dump("Aici = 3");
     }
 
     private function filterPhones($periodStart, $periodEnd, $amount, $products, $billingStates)

@@ -18,14 +18,15 @@ class AdminSendTest extends ModuleAdminController
 
     public function __construct()
     {
+        parent::__construct();
+
         $this->table = 'sendsms_test';
         $this->bootstrap = true;
-        $this->meta_title = 'Trimitere SMS test';
+        $this->meta_title = $this->module->l('Send a test SMS');
         $this->display = 'add';
 
         $this->context = Context::getContext();
 
-        parent::__construct();
 
         $this->index = count($this->_conf) + 1;
         $this->_conf[$this->index] = 'Mesajul a fost trimis';
@@ -35,12 +36,12 @@ class AdminSendTest extends ModuleAdminController
     {
         $this->fields_form = array(
             'legend' => array(
-                'title' => 'Trimitere test'
+                'title' => $this->module->l('Send a test')
             ),
             'input' => array(
                 array(
                     'type' => 'text',
-                    'label' => 'Numar de telefon',
+                    'label' => $this->module->l('Phone number'),
                     'name' => 'sendsms_phone',
                     'size' => 40,
                     'required' => true
@@ -48,15 +49,15 @@ class AdminSendTest extends ModuleAdminController
                 array(
                     'type' => 'textarea',
                     'rows' => 7,
-                    'label' => 'Mesaj',
+                    'label' => $this->module->l('Messsage'),
                     'name' => 'sendsms_message',
                     'required' => true,
                     'class' => 'ps_sendsms_content',
-                    'desc' => '160 caractere ramase'
+                    'desc' => $this->module->l('160 characters remaining')
                 )
             ),
             'submit' => array(
-                'title' => 'Trimite',
+                'title' => $this->module->l('Send'),
                 'class' => 'button'
             )
         );
@@ -78,8 +79,15 @@ class AdminSendTest extends ModuleAdminController
                 $this->module->sendSms($message, 'test', $phone);
                 Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token);
             } else {
-                $this->errors[] = Tools::displayError('Numarul de telefon nu este valid');
+                $this->errors[] = Tools::displayError($this->module->l('The phone number is not valid'));
             }
         }
+    }
+
+    public function initPageHeaderToolbar()
+    {
+        $this->page_header_toolbar_title = $this->module->l('Send a test SMS');
+        parent::initPageHeaderToolbar();
+        unset($this->toolbar_btn['new']);
     }
 }

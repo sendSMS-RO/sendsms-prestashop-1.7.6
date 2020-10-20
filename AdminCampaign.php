@@ -27,6 +27,7 @@ class AdminCampaign extends ModuleAdminController
         $this->table = 'sendsms_campaign';
         $this->display = 'add';
 
+
         $error = (string)(Tools::getValue('error'));
         if (!empty($error)) {
             $this->errors = array($this->module->l('You must choose at least one phone number and enter a message'));
@@ -54,12 +55,12 @@ class AdminCampaign extends ModuleAdminController
 
         $this->fields_form = array(
             'legend' => array(
-                'title' => 'Filtrare clienti'
+                'title' => $this->module->l('Filtering customers')
             ),
             'input' => array(
                 array(
                     'type' => 'text',
-                    'label' => 'Perioada inceput plasare comanda',
+                    'label' => $this->module->l('Order start period'),
                     'name' => 'sendsms_period_start',
                     'size' => 40,
                     'required' => false,
@@ -67,7 +68,7 @@ class AdminCampaign extends ModuleAdminController
                 ),
                 array(
                     'type' => 'text',
-                    'label' => 'Perioada sfarsit plasare comanda',
+                    'label' => $this->module->l('Order end period'),
                     'name' => 'sendsms_period_end',
                     'size' => 40,
                     'required' => false,
@@ -75,14 +76,14 @@ class AdminCampaign extends ModuleAdminController
                 ),
                 array(
                     'type' => 'text',
-                    'label' => 'Suma minima pe comanda',
+                    'label' => $this->module->l('Minimum amount per order'),
                     'name' => 'sendsms_amount',
                     'size' => 40,
                     'required' => false
                 ),
                 array(
                     'type' => 'select',
-                    'label' => 'Produs cumparat (lasati gol pentru toate produsele)',
+                    'label' => $this->module->l('Purchased product (leave blank for all products)'),
                     'name' => 'sendsms_products[]',
                     'multiple' => true,
                     'required' => false,
@@ -95,7 +96,7 @@ class AdminCampaign extends ModuleAdminController
                 ),
                 array(
                     'type' => 'select',
-                    'label' => 'Judet facturare (lasati gol pentru toate judetele)',
+                    'label' => $this->module->l('Billing county (leave blank for all counties)'),
                     'name' => 'sendsms_billing_states[]',
                     'multiple' => true,
                     'required' => false,
@@ -108,7 +109,7 @@ class AdminCampaign extends ModuleAdminController
                 )
             ),
             'submit' => array(
-                'title' => 'Filtreaza',
+                'title' => $this->module->l('Filter'),
                 'class' => 'button'
             )
         );
@@ -166,21 +167,21 @@ class AdminCampaign extends ModuleAdminController
 
         $this->fields_form = array(
             'legend' => array(
-                'title' => 'Rezultate filtrare clienti'
+                'title' => $this->module->l('Customer filtering results')
             ),
             'input' => array(
                 array(
                     'type' => 'textarea',
                     'rows' => 7,
-                    'label' => 'Mesaj',
+                    'label' => $this->module->l('Message'),
                     'name' => 'sendsms_message',
                     'required' => true,
                     'class' => 'ps_sendsms_content',
-                    'desc' => '160 caractere ramase'
+                    'desc' => $this->module->l('160 characters remaining')
                 ),
                 array(
                     'type' => 'select',
-                    'label' => 'Telefoane',
+                    'label' => $this->module->l('Phones'),
                     'name' => 'sendsms_phone_numbers[]',
                     'required' => false,
                     'multiple' => true,
@@ -189,11 +190,11 @@ class AdminCampaign extends ModuleAdminController
                         'id' => 'phone',
                         'name' => 'label'
                     ),
-                    'desc' => count($numbers) . ' numere de telefon'
+                    'desc' => count($numbers) . $this->module->l(' phone number(s)')
                 )
             ),
             'submit' => array(
-                'title' => 'Trimite',
+                'title' => $this->module->l('Send'),
                 'class' => 'button',
                 'name' => 'send'
             )
@@ -207,11 +208,14 @@ class AdminCampaign extends ModuleAdminController
     public function postProcess()
     {
         //dump($this);
+        
         if (Tools::isSubmit('send')) {
-            dump("Aici = 1");
             $message = (string)(Tools::getValue('sendsms_message'));
             $phones = Tools::getValue('sendsms_phone_numbers');
             $back = $_SERVER['HTTP_REFERER'];
+
+
+            Tools::error_log("DADS");
             if (empty($message) || empty($phones)) {
                 if (!empty($back)) {
                     Tools::redirectAdmin($back . '&error=1');
@@ -229,7 +233,6 @@ class AdminCampaign extends ModuleAdminController
                 Tools::redirectAdmin(self::$currentIndex . '&sent=1&token=' . $this->token);
             }
         } elseif (Tools::isSubmit('submitAdd' . $this->table)) {
-            dump("Aici = 2");
             $periodStart = (string)(Tools::getValue('sendsms_period_start'));
             $periodEnd = (string)(Tools::getValue('sendsms_period_end'));
             $amount = (string)(Tools::getValue('sendsms_amount'));
@@ -256,7 +259,6 @@ class AdminCampaign extends ModuleAdminController
 
             Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token . '&' . implode('&', $url));
         }
-        dump("Aici = 3");
     }
 
     private function filterPhones($periodStart, $periodEnd, $amount, $products, $billingStates)
@@ -335,5 +337,12 @@ class AdminCampaign extends ModuleAdminController
         $sql->where('active = 1');
         $sql->orderBy('name ASC');
         return Db::getInstance()->executeS($sql);
+    }
+
+    public function initPageHeaderToolbar()
+    {
+        $this->page_header_toolbar_title = $this->module->l('SMS Campaign');
+        parent::initPageHeaderToolbar();
+        unset($this->toolbar_btn['new']);
     }
 }

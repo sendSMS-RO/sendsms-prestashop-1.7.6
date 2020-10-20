@@ -114,30 +114,7 @@ class AdminCampaign extends ModuleAdminController
             )
         );
 
-        # css
-        $this->context->controller->addCSS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/css/datepicker/css/default.css'
-        );
-        $this->context->controller->addCSS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/css/datepicker/css/default.date.css'
-        );
-
-        # js
-        $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/count.js'
-        );
-        $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/datepicker/picker.js'
-        );
-        $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/datepicker/picker.date.js'
-        );
-        $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/datepicker-2.js'
-        );
-        $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/select2.js'
-        );
+        
 
         # jqueryui
         $this->context->controller->addJQueryPlugin('select2');
@@ -177,7 +154,7 @@ class AdminCampaign extends ModuleAdminController
                     'name' => 'sendsms_message',
                     'required' => true,
                     'class' => 'ps_sendsms_content',
-                    'desc' => $this->module->l('160 characters remaining')
+                    'desc' => ' boilerplate '
                 ),
                 array(
                     'type' => 'select',
@@ -203,6 +180,36 @@ class AdminCampaign extends ModuleAdminController
         $form2 = parent::renderForm();
 
         return $form1 . $form2;
+    }
+
+    public function setMedia()
+    {
+        Media::addJsDefL('sendsms_var_name', $this->module->l(' remaining characters'));
+        parent::setMedia();
+        # css
+        $this->context->controller->addCSS(
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/css/datepicker/css/default.css'
+        );
+        $this->context->controller->addCSS(
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/css/datepicker/css/default.date.css'
+        );
+
+        # js
+        $this->context->controller->addJS(
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/count.js'
+        );
+        $this->context->controller->addJS(
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/datepicker/picker.js'
+        );
+        $this->context->controller->addJS(
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/datepicker/picker.date.js'
+        );
+        $this->context->controller->addJS(
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/datepicker-2.js'
+        );
+        $this->context->controller->addJS(
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/select2.js'
+        );
     }
 
     public function postProcess()

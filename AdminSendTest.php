@@ -62,6 +62,8 @@ class AdminSendTest extends ModuleAdminController
             )
         );
 
+        Media::addJsDefL('sendsms_var_name', $this->module->l(' remaining characters'));
+
         $this->context->controller->addJS(
             Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/count.js'
         );

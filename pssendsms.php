@@ -328,6 +328,8 @@ class PsSendSMS extends Module
             $helper->fields_value['PS_SENDSMS_STATUS_' . $status['id_order_state']] = isset($statuses[$status['id_order_state']]) ? $statuses[$status['id_order_state']] : '';
         }
 
+        Media::addJsDefL('sendsms_var_name', $this->l(' remaining characters'));
+
         $this->context->controller->addJS(
             Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->name . '/views/js/count.js'
         );
@@ -440,14 +442,14 @@ class PsSendSMS extends Module
                 '{order_number}' => $order->reference,
                 '{tracking_number}' => $shipping_number,
                 '{order_date}' => date('d.m.Y', strtotime($order->date_add)),
-                '{order_total}' => number_format($order->total_paid, 2, '.', '') . " " . $currency->sign
+                '{order_total}' => number_format($order->total_paid, $this->context->currency->precision, ',', '') . " " . $currency->sign
             );
             foreach ($replace as $key => $value) {
                 $message = str_replace($key, $value, $message);
             }
 
             # send sms
-            $this->sendSms($message, 'order', $phone);
+            //$this->sendSms($message, 'order', $phone);
         }
     }
 
@@ -490,7 +492,7 @@ class PsSendSMS extends Module
             $curl = curl_init();
             curl_setopt($curl, CURLOPT_HEADER, 0);
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($curl, CURLOPT_URL, 'https://hub.sendsms.ro/json?action=message_send_gdpr&username=' . $username . '&password=' . $password . '&from=' . $from . '&to=' . $phone . '&text=' . urlencode($message) . '&short=true');
+            curl_setopt($curl, CURLOPT_URL, 'https://api.sendsms.ro/json?action=message_send_gdpr&username=' . $username . '&password=' . $password . '&from=' . $from . '&to=' . $phone . '&text=' . urlencode($message) . '&short=true');
             curl_setopt($curl, CURLOPT_HTTPHEADER, array("Connection: keep-alive"));
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 

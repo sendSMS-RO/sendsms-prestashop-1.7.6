@@ -42,7 +42,7 @@
                         ps_sendsms_content.onkeyup = function() {
                             var text_length = this.value.length;
                             var text_remaining = 160 - text_length;
-                            this.nextElementSibling.innerHTML = text_remaining + {l s=' remaining characters' mod='pssendsms'};
+                            this.nextElementSibling.innerHTML = text_remaining + '{l s=' remaining characters' mod='pssendsms'}';
                         }
                     </script>
                 </div>

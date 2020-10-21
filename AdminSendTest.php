@@ -11,7 +11,6 @@
  *  @copyright 2020-2020 Any Media Development
  *  @license   AFL
  */
-
 class AdminSendTest extends ModuleAdminController
 {
     protected $index;
@@ -30,7 +29,6 @@ class AdminSendTest extends ModuleAdminController
 
         $this->index = count($this->_conf) + 1;
         $this->_conf[$this->index] = $this->module->l('The message was sent');
-
     }
 
     public function renderForm()

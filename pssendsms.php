@@ -11,7 +11,6 @@
  *  @copyright 2020-2020 Any Media Development
  *  @license   AFL 
  */
-
 if (!defined('_PS_VERSION_')) {
     exit;
 }
@@ -50,7 +49,6 @@ class PsSendSMS extends Module
         if (!Configuration::get('PS_SENDSMS_USERNAME') || !Configuration::get('PS_SENDSMS_PASSWORD')) {
             $this->warning = $this->l('No username and / or password was set');
         }
-
     }
 
     private function installDb()
@@ -471,7 +469,7 @@ class PsSendSMS extends Module
 
     public function sendSms($message, $type = 'order', $phone = '')
     {
-        $phone = preg_replace("/[^0-9]/", "", $phone );
+        $phone = preg_replace("/[^0-9]/", "", $phone);
         $username = Configuration::get('PS_SENDSMS_USERNAME');
         $password = Configuration::get('PS_SENDSMS_PASSWORD');
         $isSimulation = Configuration::get('PS_SENDSMS_SIMULATION');

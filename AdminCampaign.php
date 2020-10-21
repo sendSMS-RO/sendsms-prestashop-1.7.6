@@ -9,7 +9,7 @@
  *
  *  @author    Radu Vasile Catalin
  *  @copyright 2020-2020 Any Media Development
- *  @license   AFL 
+ *  @license   AFL
  */
 
 class AdminCampaign extends ModuleAdminController
@@ -21,7 +21,7 @@ class AdminCampaign extends ModuleAdminController
     {
         parent::__construct();
 
-        $this->bootstrap = true;       
+        $this->bootstrap = true;
 
         $this->context = Context::getContext();
         $this->meta_title = $this->module->l('SMS Campaign');

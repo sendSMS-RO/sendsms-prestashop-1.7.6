@@ -9,8 +9,9 @@
  *
  *  @author    Radu Vasile Catalin
  *  @copyright 2020-2020 Any Media Development
- *  @license   AFL 
+ *  @license   AFL
  */
+
 if (!defined('_PS_VERSION_')) {
     exit;
 }

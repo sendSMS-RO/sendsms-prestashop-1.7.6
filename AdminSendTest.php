@@ -11,6 +11,7 @@
  *  @copyright 2020-2020 Any Media Development
  *  @license   AFL
  */
+
 class AdminSendTest extends ModuleAdminController
 {
     protected $index;

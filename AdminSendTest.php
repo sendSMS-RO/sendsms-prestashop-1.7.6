@@ -9,7 +9,7 @@
  *
  *  @author    Radu Vasile Catalin
  *  @copyright 2020-2020 Any Media Development
- *  @license   OSL-3.0
+ *  @license   AFL
  */
 
 class AdminSendTest extends ModuleAdminController
@@ -29,7 +29,8 @@ class AdminSendTest extends ModuleAdminController
 
 
         $this->index = count($this->_conf) + 1;
-        $this->_conf[$this->index] = 'Mesajul a fost trimis';
+        $this->_conf[$this->index] = $this->module->l('The message was sent');
+
     }
 
     public function renderForm()

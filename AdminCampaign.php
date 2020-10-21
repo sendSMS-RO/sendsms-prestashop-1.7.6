@@ -9,12 +9,13 @@
  *
  *  @author    Radu Vasile Catalin
  *  @copyright 2020-2020 Any Media Development
- *  @license   OSL-3.0
+ *  @license   AFL 
  */
 
 class AdminCampaign extends ModuleAdminController
 {
     protected $index;
+    protected $indexError;
 
     public function __construct()
     {
@@ -27,11 +28,9 @@ class AdminCampaign extends ModuleAdminController
         $this->table = 'sendsms_campaign';
         $this->display = 'add';
 
+        $this->indexError = count($this->_error) + 1;
 
-        $error = (string)(Tools::getValue('error'));
-        if (!empty($error)) {
-            $this->errors = array($this->module->l('You must choose at least one phone number and enter a message'));
-        }
+        $this->_error[$this->indexError] = $this->module->l('You must choose at least one phone number and enter a message');
 
         $sent = (string)(Tools::getValue('sent'));
         if (!empty($sent)) {
@@ -59,20 +58,17 @@ class AdminCampaign extends ModuleAdminController
             ),
             'input' => array(
                 array(
-                    'type' => 'text',
+                    'type' => 'date',
                     'label' => $this->module->l('Order start period'),
                     'name' => 'sendsms_period_start',
-                    'size' => 40,
                     'required' => false,
-                    'class' => 'sendsms_datepicker'
+                    'autocomplete' => 'off'
                 ),
                 array(
-                    'type' => 'text',
+                    'type' => 'date',
                     'label' => $this->module->l('Order end period'),
                     'name' => 'sendsms_period_end',
-                    'size' => 40,
                     'required' => false,
-                    'class' => 'sendsms_datepicker'
                 ),
                 array(
                     'type' => 'text',
@@ -154,7 +150,7 @@ class AdminCampaign extends ModuleAdminController
                     'name' => 'sendsms_message',
                     'required' => true,
                     'class' => 'ps_sendsms_content',
-                    'desc' => ' boilerplate '
+                    'desc' => $this->module->l(' characters remained.')
                 ),
                 array(
                     'type' => 'select',
@@ -186,27 +182,12 @@ class AdminCampaign extends ModuleAdminController
     {
         Media::addJsDefL('sendsms_var_name', $this->module->l(' remaining characters'));
         parent::setMedia();
-        # css
-        $this->context->controller->addCSS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/css/datepicker/css/default.css'
-        );
-        $this->context->controller->addCSS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/css/datepicker/css/default.date.css'
-        );
 
         # js
         $this->context->controller->addJS(
             Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/count.js'
         );
-        $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/datepicker/picker.js'
-        );
-        $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/datepicker/picker.date.js'
-        );
-        $this->context->controller->addJS(
-            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/datepicker-2.js'
-        );
+
         $this->context->controller->addJS(
             Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/select2.js'
         );
@@ -221,13 +202,11 @@ class AdminCampaign extends ModuleAdminController
             $phones = Tools::getValue('sendsms_phone_numbers');
             $back = $_SERVER['HTTP_REFERER'];
 
-
-            Tools::error_log("DADS");
             if (empty($message) || empty($phones)) {
                 if (!empty($back)) {
-                    Tools::redirectAdmin($back . '&error=1');
+                    Tools::redirectAdmin($back . '&error=2');
                 } else {
-                    Tools::redirectAdmin(self::$currentIndex . '&error=1&token=' . $this->token);
+                    Tools::redirectAdmin(self::$currentIndex . '&error=2&token=' . $this->token);
                 }
             } else {
                 # send sms

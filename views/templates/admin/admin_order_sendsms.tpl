@@ -8,7 +8,7 @@
  *
  *  @author    Radu Vasile Catalin
  *  @copyright 2020-2020 Any Media Development
- *  @license   OSL-3.0
+ *  @license   AFL 
  *}
 
 <form id="sendsms_order_form" class="defaultForm form-horizontal" method="post" novalidate="">

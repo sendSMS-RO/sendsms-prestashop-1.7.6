@@ -9,7 +9,7 @@
  *
  *  @author    Radu Vasile Catalin
  *  @copyright 2020-2020 Any Media Development
- *  @license   OSL-3.0
+ *  @license   AFL 
  */
 
 if (!defined('_PS_VERSION_')) {
@@ -31,6 +31,7 @@ class PsSendSMS extends Module
 
     public function __construct()
     {
+
         $this->name = 'pssendsms';
         $this->tab = 'advertising_marketing';
         $this->version = '1.0.4';
@@ -49,6 +50,7 @@ class PsSendSMS extends Module
         if (!Configuration::get('PS_SENDSMS_USERNAME') || !Configuration::get('PS_SENDSMS_PASSWORD')) {
             $this->warning = $this->l('No username and / or password was set');
         }
+
     }
 
     private function installDb()
@@ -449,7 +451,7 @@ class PsSendSMS extends Module
             }
 
             # send sms
-            //$this->sendSms($message, 'order', $phone);
+            $this->sendSms($message, 'order', $phone);
         }
     }
 
@@ -490,6 +492,11 @@ class PsSendSMS extends Module
 
         if (!empty(trim($message))) {
             $curl = curl_init();
+
+            $useragent = $_SERVER['HTTP_USER_AGENT'];
+
+            curl_setopt($curl, CURLOPT_USERAGENT, "SendSMS.RO API Agent for " . $useragent);
+            curl_setopt($curl, CURLOPT_REFERER, _PS_BASE_URL_);
             curl_setopt($curl, CURLOPT_HEADER, 0);
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($curl, CURLOPT_URL, 'https://api.sendsms.ro/json?action=message_send_gdpr&username=' . $username . '&password=' . $password . '&from=' . $from . '&to=' . $phone . '&text=' . urlencode($message) . '&short=true');

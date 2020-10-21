@@ -9,7 +9,7 @@
  *
  *  @author    Radu Vasile Catalin
  *  @copyright 2020-2020 Any Media Development
- *  @license   OSL-3.0
+ *  @license   AFL
  */
 
 class AdminHistory extends ModuleAdminController
@@ -75,8 +75,6 @@ class AdminHistory extends ModuleAdminController
                 'type' => 'text'
             ),
         );
-
-        parent::__construct();
     }
 
     public function initPageHeaderToolbar()

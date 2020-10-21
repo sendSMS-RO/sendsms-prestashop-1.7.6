@@ -8,7 +8,7 @@
  *
  *  @author    Radu Vasile Catalin
  *  @copyright 2020-2020 Any Media Development
- *  @license   OSL-3.0
+ *  @license   AFL 
  */
 $(document).ready(function() {
     //phptext = <?php echo json_encode($vars); ?>;

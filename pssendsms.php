@@ -34,7 +34,7 @@ class PsSendSMS extends Module
 
         $this->name = 'pssendsms';
         $this->tab = 'advertising_marketing';
-        $this->version = '1.0.4';
+        $this->version = '1.0.5';
         $this->author = 'Any Place Media SRL';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = array('min' => '1.6', 'max' => '1.7.6');
@@ -442,7 +442,7 @@ class PsSendSMS extends Module
                 '{shipping_last_name}' => $this->cleanDiacritice($shippingAddress->lastname),
                 '{order_number}' => $order->reference,
                 '{tracking_number}' => $shipping_number,
-                '{order_date}' => date('d.m.Y', strtotime($order->date_add)),
+                '{order_date}' => date('d-m-Y', strtotime($order->date_add)),
                 '{order_total}' => number_format($order->total_paid, $this->context->currency->precision, ',', '') . " " . $currency->sign
             );
             foreach ($replace as $key => $value) {

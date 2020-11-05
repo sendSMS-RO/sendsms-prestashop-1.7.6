@@ -194,7 +194,7 @@ class AdminCampaign extends ModuleAdminController
     }
 
     public function postProcess()
-    {        
+    {
         if (Tools::isSubmit('send')) {
             $message = (string)(Tools::getValue('sendsms_message'));
             $phones = Tools::getValue('sendsms_phone_numbers');

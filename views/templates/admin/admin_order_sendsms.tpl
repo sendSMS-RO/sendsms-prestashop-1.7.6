@@ -31,6 +31,22 @@
                 </div>
             </div>
             <div class="form-group">
+                <label class="control-label col-lg-3">
+                    {l s='Short url? (Please use only urls that start with https:// or http://)' mod='pssendsms'}
+                </label>
+                <div class="col-lg-9">
+                    <input type="checkbox" name="sendsms_url" id="sendsms_url" value="on" class="" size="10">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="control-label col-lg-3">
+                    {l s='Add an unsubscribe link? (You must specify {gdpr} key message. {gdpr} key will be replaced automaticaly with confirmation unique confirmation link.)' mod='pssendsms'}
+                </label>
+                <div class="col-lg-9">
+                    <input type="checkbox" name="sendsms_gdpr" id="sendsms_gdpr" value="on" class="" size="10">
+                </div>
+            </div>
+            <div class="form-group">
                 <label class="control-label col-lg-3 required">
                     {l s='Message' mod='pssendsms'}
                 </label>

@@ -54,11 +54,43 @@ class AdminSendTest extends ModuleAdminController
                     'required' => true,
                     'class' => 'ps_sendsms_content',
                     'desc' => $this->module->l('160 characters remaining')
+                ),
+                array(
+                    'type' => 'checkbox',
+                    'label' => $this->l('Short url?'),
+                    'name' => 'sendsms_url',
+                    'required' => false,
+                    'values' => array(
+                        'query' => array(
+                            array(
+                                'url' => null,
+                            )
+                        ),
+                        'id' => 'url',
+                        'name' => 'url'
+                    ),
+                    'desc' => 'Please use only urls that start with https:// or http://'
+                ),
+                array(
+                    'type' => 'checkbox',
+                    'label' => $this->l('Add an unsubscribe link?'),
+                    'name' => 'sendsms_gdpr',
+                    'required' => false,
+                    'values' => array(
+                        'query' => array(
+                            array(
+                                'gdpr' => null,
+                            )
+                        ),
+                        'id' => 'gdpr',
+                        'name' => 'gdpr'
+                    ),
+                    'desc' => 'You must specify {gdpr} key message. {gdpr} key will be replaced automaticaly with confirmation unique confirmation link. If {gdpr} key is not specified confirmation link will be placed at the end of message.'
                 )
             ),
             'submit' => array(
                 'title' => $this->module->l('Send'),
-                'class' => 'button'
+                'class' => 'btn btn-default'
             )
         );
 
@@ -77,8 +109,11 @@ class AdminSendTest extends ModuleAdminController
             $phone = (string)(Tools::getValue('sendsms_phone'));
             $message = (string)(Tools::getValue('sendsms_message'));
             $phone = Validate::isPhoneNumber($phone) ? $phone : "";
+            $short = Tools::getValue('sendsms_url_') ? true : false;
+            $gdpr = Tools::getValue('sendsms_gdpr_') ? true : false;
+
             if (!empty($phone) && !empty($message)) {
-                $this->module->sendSms($message, 'test', $phone);
+                $this->module->sendSms($message, 'test', $phone, $short, $gdpr);
                 Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token);
             } else {
                 $this->errors[] = Tools::displayError($this->module->l('The phone number is not valid'));

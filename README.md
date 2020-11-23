@@ -1,15 +1,25 @@
-# sendsms-prestashop
-Modul SendSMS pentru Prestashop
-Caracteristicile cheie ale pluginului SendSMS pentru PrestaShop:
-Addon-ul SendSMS poate fi instalat si personalizat foarte usor din panoul de administrare al magazinului online.
-Permite expedierea de notificari SMS personalizate privind statusul comenzii, , asigurand o comunicare neintrerupta cu clientii.
-Permite personalizarea campaniilor SMS la nivel de : produs cumparat, perioada, suma minima comanda.
-Posibilitatea de a trimite un SMS test catre orice numar (previzualizarea notificarii ce urmeaza a fi expediata).
-Posibilitatea de a trimite mesaje selectiv catre oricare dintre clientii care au plasat comenzi pe site. De exemplu, in editarea statusului unui SMS de tip "Comanda finalizata" puteti include un cupon de reducere de 10% la urmatoarea comanda. Fiti creativi, iar vanzarile va vor depasi asteptarile !
-Modul compatibil versiunile Prestashop de pana in 1.7.6
-Echipa SendSMS.ro iti ofera asistenta gratuita, atat la instalare, cat si post-vanzare.
-Din rubrica „Modules” a paginii de administrare, incarcati fisierul .zip descarcat.
-Cand incarcarea s-a finalizat, activati modulul.
-Creati un cont pe platforma SendSMS.ro de si achizitionati credit. Aceleasi date de autentificare vor fi folosite si pentru configurarea pluginul.
-Configurati si personalizati modulul.
-Important! - in locul parolei inserati API Key ul generat din platforma sendSMS.ro, acest Key se va bloca pe IP ul primului request, se pot generea API Key uri nelimitat
+Use our SMS shipping solution to deliver the right information at the right time. Give your customers a superior experience!
+
+# Description
+Why use SMS Notifications?
+
+Simple - it is the simplest and handy channel through which you can communicate information about their orders. SMS as a communication method has an opening rate of 95% and most are read within 5 seconds of receiving them. It was found to be 3 times more productive than email and by far the easiest to customize. For example, when the order status changes to "Complete" you can include a 10% discount coupon on the next order.
+
+All you have to do is get creative, and your sales will exceed your expectations!
+
+We offer a variety of order statuses for uninterrupted communication with your customers.
+
+Characteristics:
+
+* Easy to install
+* Easy to personalize
+* Order details: order number, order status
+* Extended settings 
+* Compatible with Prestashop 1.6-1.7.6
+* Possibility to send a test SMS to any number (you have the possibility to preview the notification to be sent)
+* Ability to selectively send messages to any of the customers who have placed orders on your site.
+
+# Installation
+1. Unzip and upload the pssendsms folder to the folder /modules/, make sure the name is pssendsms
+2. Install the Module in Module Catalog tab
+3. Configure the module in Module Manager SendSMS -> Configure

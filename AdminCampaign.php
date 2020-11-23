@@ -37,6 +37,39 @@ class AdminCampaign extends ModuleAdminController
             $this->confirmations = array($this->module->l('The message was sent'));
         }
 
+        $price_checked = (string)(Tools::getValue('price_checked'));
+        if (!empty($price_checked)) {
+            $username = Configuration::get('PS_SENDSMS_USERNAME');
+            $password = trim(PhpEncryption::decrypt(Configuration::get('PS_SENDSMS_PASSWORD')));
+
+            $lenght = Tools::strlen(Configuration::get('PS_SENDSMS_CAMPAIGN_MESSAGE'));
+            $messages_to_send = 0;
+            $messages = $lenght / 160 + 1;
+            if ($lenght > 0) {
+                if ($lenght % 160 == 0) {
+                    $messages--;
+                }
+                $messages_to_send = floor($messages);
+            }
+
+            $price = 0;
+            foreach (unserialize(Configuration::get('PS_SENDSMS_CAMPAIGN_PHONES')) as $phone) {
+                if (Configuration::get('PS_SENDSMS_COUNTRY')) {
+                    $phone = $this->module->validatePhone($phone);
+                } else {
+                    $phone = preg_replace("/[^0-9]/", "", $phone);
+                }
+                $status = $this->module->makeApiCall('https://api.sendsms.ro/json?action=route_check_price' .'&username=' . urlencode($username) . '&password=' . urlencode($password) . '&to=' . urlencode($phone));
+                if ($status['details']['status'] === 64) {
+                    $multiplier = $status['details']['cost'];
+                } else {
+                    $multiplier = 0;
+                }
+                $price += $multiplier * $messages_to_send;
+            }
+            $this->informations = array($this->module->l('The price of the messages will be approximately ') . $price . $this->module->l(' euros'));
+        }
+
         $this->index = count($this->_conf) + 1;
 
         $this->_conf[$this->index] = $this->module->l('Customers have been filtered');
@@ -106,29 +139,28 @@ class AdminCampaign extends ModuleAdminController
             ),
             'submit' => array(
                 'title' => $this->module->l('Filter'),
-                'class' => 'button'
+                'class' => 'btn btn-default'
             )
         );
 
-        
 
         # jqueryui
         $this->context->controller->addJQueryPlugin('select2');
 
-        $periodStart = (string)(Tools::getValue('periodStart'));
-        $periodEnd = (string)(Tools::getValue('periodEnd'));
-        $amount = (string)(Tools::getValue('amount'));
+        $periodStart = (string)(Configuration::get('PS_SENDSMS_START_PERIOD'));
+        $periodEnd = (string)(Configuration::get('PS_SENDSMS_END_PERIOD'));
+        $amount = (string)(Configuration::get('PS_SENDSMS_ORDER_AMOUNT'));
         $products = array();
         $billingStates = array();
 
-        if (Configuration::hasKey('SENDSMS_PRODUCTS')) {
-            $products = Configuration::get('SENDSMS_PRODUCTS') ? explode('|', Configuration::get('SENDSMS_PRODUCTS')) : array();
+        if (Configuration::get('PS_SENDSMS_PRODUCTS')) {
+            $products = Configuration::get('PS_SENDSMS_PRODUCTS') ? explode('|', Configuration::get('PS_SENDSMS_PRODUCTS')) : array();
         }
-        if (Configuration::hasKey('SENDSMS_STATES')) {
-            $billingStates = Configuration::get('SENDSMS_STATES') ? explode('|', Configuration::get('SENDSMS_STATES')) : array();
+        if (Configuration::get('PS_SENDSMS_STATES')) {
+            $billingStates = Configuration::get('PS_SENDSMS_STATES') ? explode('|', Configuration::get('PS_SENDSMS_STATES')) : array();
         }
         $numbers = $this->filterPhones($periodStart, $periodEnd, $amount, $products, $billingStates);
-
+        
         # set form values
         $this->fields_value['sendsms_period_start'] = $periodStart;
         $this->fields_value['sendsms_period_end'] = $periodEnd;
@@ -164,14 +196,66 @@ class AdminCampaign extends ModuleAdminController
                         'name' => 'label'
                     ),
                     'desc' => count($numbers) . $this->module->l(' phone number(s)')
+                ),
+                array(
+                    'type' => 'checkbox',
+                    'label' => $this->l('Short url?'),
+                    'name' => 'sendsms_url',
+                    'required' => false,
+                    'values' => array(
+                        'query' => array(
+                            array(
+                                'url' => null,
+                            )
+                        ),
+                        'id' => 'url',
+                        'name' => 'url'
+                    ),
+                    'desc' => 'Please use only urls that start with https:// or http://'
+                ),
+                array(
+                    'type' => 'checkbox',
+                    'label' => $this->l('Add an unsubscribe link?'),
+                    'name' => 'sendsms_gdpr',
+                    'required' => false,
+                    'values' => array(
+                        'query' => array(
+                            array(
+                                'gdpr' => null,
+                            )
+                        ),
+                        'id' => 'gdpr',
+                        'name' => 'gdpr'
+                    ),
+                    'desc' => 'You must specify {gdpr} key message. {gdpr} key will be replaced automaticaly with confirmation unique confirmation link. If {gdpr} key is not specified confirmation link will be placed at the end of message.'
                 )
             ),
             'submit' => array(
                 'title' => $this->module->l('Send'),
-                'class' => 'button',
+                'class' => 'btn btn-default',
                 'name' => 'send'
+            ),
+            'buttons' => array(
+                'check' => array(
+                    'type' => 'submit',
+                    'title' => $this->l('Estimate cost'),
+                    'name' => 'check-price',
+                    'icon' => 'process-icon-preview',
+                    'class' => 'btn btn-default pull-right',
+                )
             )
         );
+
+        $message = (string)(Configuration::get('PS_SENDSMS_CAMPAIGN_MESSAGE'));
+        $phones = unserialize(Configuration::get('PS_SENDSMS_CAMPAIGN_PHONES'));
+        $short = Configuration::get('PS_SENDSMS_CAMPAIGN_SHORT');
+        $gdpr = Configuration::get('PS_SENDSMS_CAMPAIGN_GDPR');
+        
+        # set form values
+        $this->fields_value['sendsms_message'] = $message;
+        $this->fields_value['sendsms_phone_numbers[]'] = $phones;
+        $this->fields_value['sendsms_url_'] = $short;
+        $this->fields_value['sendsms_gdpr_'] = $gdpr;
 
         $form2 = parent::renderForm();
 
@@ -191,14 +275,43 @@ class AdminCampaign extends ModuleAdminController
         $this->context->controller->addJS(
             Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/select2.js'
         );
+
+        $this->context->controller->addCSS(
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/css/adminCampaign.css'
+        );
     }
 
     public function postProcess()
     {
-        if (Tools::isSubmit('send')) {
+        if (Tools::isSubmit('check-price')) {
+            $message = (string)(Tools::getValue('sendsms_message'));
+            $phones = Tools::getValue('sendsms_phone_numbers');
+            $short = Tools::getValue('sendsms_url_') ? true : false;
+            $gdpr = Tools::getValue('sendsms_gdpr_') ? true : false;
+
+            #add
+            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_MESSAGE', $message);
+            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_PHONES', serialize($phones));
+            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_SHORT', $short);
+            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_GDPR', $gdpr);
+
+            Tools::redirectAdmin(self::$currentIndex . '&price_checked=1&token=' . $this->token);
+        } elseif (Tools::isSubmit('send')) {
             $message = (string)(Tools::getValue('sendsms_message'));
             $phones = Tools::getValue('sendsms_phone_numbers');
             $back = $_SERVER['HTTP_REFERER'];
+            $short = Tools::getValue('sendsms_url_') ? true : false;
+            $gdpr = Tools::getValue('sendsms_gdpr_') ? true : false;
+
+            #delete
+            Configuration::updateValue('PS_SENDSMS_PRODUCTS', null);
+            Configuration::updateValue('PS_SENDSMS_STATES', null);
+            Configuration::updateValue('PS_SENDSMS_ORDER_AMOUNT', null);
+            Configuration::updateValue('PS_SENDSMS_END_PERIOD', null);
+            Configuration::updateValue('PS_SENDSMS_START_PERIOD', null);
+            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_PHONES', null);
+            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_SHORT', null);
+            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_GDPR', null);
 
             if (empty($message) || empty($phones)) {
                 if (!empty($back)) {
@@ -211,7 +324,7 @@ class AdminCampaign extends ModuleAdminController
                 foreach ($phones as $phone) {
                     $phone = Validate::isPhoneNumber($phone) ? $phone : "";
                     if (!empty($phone)) {
-                        $this->module->sendSms($message, 'campaign', $phone);
+                        $this->module->sendSms($message, 'campaign', $phone, $short, $gdpr);
                     }
                 }
                 Tools::redirectAdmin(self::$currentIndex . '&sent=1&token=' . $this->token);
@@ -220,28 +333,21 @@ class AdminCampaign extends ModuleAdminController
             $periodStart = (string)(Tools::getValue('sendsms_period_start'));
             $periodEnd = (string)(Tools::getValue('sendsms_period_end'));
             $amount = (string)(Tools::getValue('sendsms_amount'));
-            $url = array();
-            if (!empty($periodStart)) {
-                $url[] = 'periodStart=' . urlencode($periodStart);
-            }
-            if (!empty($periodEnd)) {
-                $url[] = 'periodEnd=' . urlencode($periodEnd);
-            }
-            if (!empty($amount)) {
-                $url[] = 'amount=' . urlencode($amount);
-            }
+            Configuration::updateValue('PS_SENDSMS_START_PERIOD', $periodStart, true);
+            Configuration::updateValue('PS_SENDSMS_END_PERIOD', $periodEnd, true);
+            Configuration::updateValue('PS_SENDSMS_ORDER_AMOUNT', $amount, true);
             if (Tools::getValue('sendsms_products')) {
-                Configuration::updateValue('SENDSMS_PRODUCTS', implode("|", Tools::getValue('sendsms_products')), true);
+                Configuration::updateValue('PS_SENDSMS_PRODUCTS', implode("|", Tools::getValue('sendsms_products')), true);
             } else {
-                Configuration::updateValue('SENDSMS_PRODUCTS', null);
+                Configuration::updateValue('PS_SENDSMS_PRODUCTS', null);
             }
             if (Tools::getValue('sendsms_billing_states')) {
-                Configuration::updateValue('SENDSMS_STATES', implode("|", Tools::getValue('sendsms_billing_states')), true);
+                Configuration::updateValue('PS_SENDSMS_STATES', implode("|", Tools::getValue('sendsms_billing_states')), true);
             } else {
-                Configuration::updateValue('SENDSMS_STATES', null);
+                Configuration::updateValue('PS_SENDSMS_STATES', null);
             }
 
-            Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token . '&' . implode('&', $url));
+            Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token);
         }
     }
 

@@ -26,7 +26,19 @@ class PsSendSMS extends Module
         'PS_SENDSMS_LABEL',
         'PS_SENDSMS_SIMULATION',
         'PS_SENDSMS_SIMULATION_PHONE',
-        'PS_SENDSMS_STATUS'
+        'PS_SENDSMS_STATUS',
+        'PS_SENDSMS_PRODUCTS',
+        'PS_SENDSMS_STATES',
+        'PS_SENDSMS_COUNTRY',
+        'PS_SENDSMS_URL',
+        'PS_SENDSMS_GDPR',
+        'PS_SENDSMS_START_PERIOD',
+        'PS_SENDSMS_END_PERIOD',
+        'PS_SENDSMS_ORDER_AMOUNT',
+        'PS_SENDSMS_CAMPAIGN_MESSAGE',
+        'PS_SENDSMS_CAMPAIGN_PHONES',
+        'PS_SENDSMS_CAMPAIGN_SHORT',
+        'PS_SENDSMS_CAMPAIGN_GDPR'
     );
 
     public function __construct()
@@ -34,7 +46,7 @@ class PsSendSMS extends Module
 
         $this->name = 'pssendsms';
         $this->tab = 'advertising_marketing';
-        $this->version = '1.0.7';
+        $this->version = '1.0.8';
         $this->author = 'Any Place Media SRL';
         $this->module_key = '01417c91c848ebbc67f458d260e61f98';
         $this->need_instance = 0;
@@ -156,26 +168,37 @@ class PsSendSMS extends Module
 
     public function getContent()
     {
+        $customer_credit = $this->l('Please configure your module first.');
+
+        $username = Tools::getValue('PS_SENDSMS_USERNAME') ? (string)(Tools::getValue('PS_SENDSMS_USERNAME')) : (string)(Configuration::get('PS_SENDSMS_USERNAME'));
+        $password = Tools::getValue('PS_SENDSMS_PASSWORD') ? (string)(Tools::getValue('PS_SENDSMS_PASSWORD')) : (string)(PhpEncryption::decrypt(Configuration::get('PS_SENDSMS_PASSWORD')));
+
+        if (!empty($username) && !empty($password)) {
+            //check balance
+            $status = $this->makeApiCall('http://api.sendsms.ro/json?action=user_get_balance&username=' . urlencode($username) . '&password=' . urlencode(trim($password)));
+            if ($status['status'] >= 0) {
+                $customer_credit = $this->l('Your current credit is ') . $status['details'] . $this->l(' euro') ;
+            }
+        }
         $output = null;
         if (Tools::isSubmit('submit' . $this->name)) {
             # get info
-            $username = (string)(Tools::getValue('PS_SENDSMS_USERNAME'));
-            $password = (string)(Tools::getValue('PS_SENDSMS_PASSWORD'));
+            
             $label = (string)(Tools::getValue('PS_SENDSMS_LABEL'));
             $isSimulation = (string)(Tools::getValue('PS_SENDSMS_SIMULATION_'));
             $simulationPhone = (string)(Tools::getValue('PS_SENDSMS_SIMULATION_PHONE'));
             $country = (string)(Tools::getValue('PS_SENDSMS_COUNTRY_'));
 
+            $short = array();
             $statuses = array();
-            //$urls = array();
+            $gdpr = array();
 
             $orderStatuses = OrderState::getOrderStates($this->context->language->id);
             foreach ($orderStatuses as $status) {
                 $statuses[$status['id_order_state']] = (string)(Tools::getValue('PS_SENDSMS_STATUS_' . $status['id_order_state']));
-                //dump(Configuration::updateValue('PS_SENDSMS_URL_' . $status['id_order_state'] . '_', (string)(Tools::getValue('PS_SENDSMS_URL_' . $status['id_order_state'] . '_')) ? 1 : 0));
+                $short[$status['id_order_state']] = (string)(Tools::getValue('PS_SENDSMS_URL_' . $status['id_order_state'] . '_')) ? 1 : 0;
+                $gdpr[$status['id_order_state']] = (string)(Tools::getValue('PS_SENDSMS_GDPR_' . $status['id_order_state'] . '_')) ? 1 : 0;
             }
-
-            //dump($_REQUEST);
 
             # validate and update settings
             if (empty($username) || empty($label) || (empty($password) && !Configuration::get('PS_SENDSMS_PASSWORD'))) {
@@ -189,16 +212,23 @@ class PsSendSMS extends Module
                 }
                 Configuration::updateValue('PS_SENDSMS_USERNAME', $username);
                 if (!empty($password)) {
-                    Configuration::updateValue('PS_SENDSMS_PASSWORD', $password);
+                    Configuration::updateValue('PS_SENDSMS_PASSWORD', PhpEncryption::encrypt($password));
                 }
                 Configuration::updateValue('PS_SENDSMS_LABEL', $label);
                 Configuration::updateValue('PS_SENDSMS_SIMULATION', !empty($isSimulation) ? 1 : 0);
                 Configuration::updateValue('PS_SENDSMS_STATUS', serialize($statuses));
                 Configuration::updateValue('PS_SENDSMS_COUNTRY', !empty($country) ? 1 : 0);
-
+                Configuration::updateValue('PS_SENDSMS_URL', serialize($short));
+                Configuration::updateValue('PS_SENDSMS_GDPR', serialize($gdpr));
                 $output .= $this->displayConfirmation($this->l('The settings have been updated'));
             }
         }
+
+        $this->context->smarty->assign([
+            'customer_credit' => $customer_credit,
+        ]);
+
+        $output .= $this->context->smarty->fetch($this->local_path . 'views/templates/hook/credit.tpl');
         return $output . $this->displayForm();
     }
 
@@ -304,22 +334,38 @@ class PsSendSMS extends Module
                 'class' => 'ps_sendsms_content',
                 'desc' => '<div>' . (isset($defaults[$status['id_order_state']]) ? $this->l('Ex: ') . $defaults[$status['id_order_state']] : '') . '</div>'
             );
-            // $this->fields_form[0]['form']['input'][] = array(
-            //     'type' => 'checkbox',
-            //     'label' => $this->l('Reduce urls?'),
-            //     'name' => 'PS_SENDSMS_URL_' . $status['id_order_state'],
-            //     'required' => false,
-            //     'values' => array(
-            //         'query' => array(
-            //             array(
-            //                 'url' => null,
-            //             )
-            //         ),
-            //         'id' => 'url',
-            //         'name' => 'url'
-            //     ),
-            //     'desc' => ''
-            // );
+            $this->fields_form[0]['form']['input'][] = array(
+                'type' => 'checkbox',
+                'label' => $this->l('Short url?'),
+                'name' => 'PS_SENDSMS_URL_' . $status['id_order_state'],
+                'required' => false,
+                'values' => array(
+                    'query' => array(
+                        array(
+                            'url' => null,
+                        )
+                    ),
+                    'id' => 'url',
+                    'name' => 'url'
+                ),
+                'desc' => 'Please use only urls that start with https:// or http://'
+            );
+            $this->fields_form[0]['form']['input'][] = array(
+                'type' => 'checkbox',
+                'label' => $this->l('Add an unsubscribe link?'),
+                'name' => 'PS_SENDSMS_GDPR_' . $status['id_order_state'],
+                'required' => false,
+                'values' => array(
+                    'query' => array(
+                        array(
+                            'gdpr' => null,
+                        )
+                    ),
+                    'id' => 'gdpr',
+                    'name' => 'gdpr'
+                ),
+                'desc' => 'You must specify {gdpr} key message. {gdpr} key will be replaced automaticaly with confirmation unique confirmation link. If {gdpr} key is not specified confirmation link will be placed at the end of message.'
+            );
         }
 
         # add submit button
@@ -360,7 +406,7 @@ class PsSendSMS extends Module
 
         // Load current value
         $helper->fields_value['PS_SENDSMS_USERNAME'] = Configuration::get('PS_SENDSMS_USERNAME');
-        $helper->fields_value['PS_SENDSMS_PASSWORD'] = Configuration::get('PS_SENDSMS_PASSWORD');
+        $helper->fields_value['PS_SENDSMS_PASSWORD'] = PhpEncryption::decrypt(Configuration::get('PS_SENDSMS_PASSWORD'));
         $helper->fields_value['PS_SENDSMS_LABEL'] = Configuration::get('PS_SENDSMS_LABEL');
         $helper->fields_value['PS_SENDSMS_SIMULATION_'] = Configuration::get('PS_SENDSMS_SIMULATION');
         $helper->fields_value['PS_SENDSMS_SIMULATION_PHONE'] = Configuration::get('PS_SENDSMS_SIMULATION_PHONE');
@@ -368,9 +414,12 @@ class PsSendSMS extends Module
         
 
         $statuses = unserialize(Configuration::get('PS_SENDSMS_STATUS'));
+        $urls = unserialize(Configuration::get('PS_SENDSMS_URL'));
+        $gdpr = unserialize(Configuration::get('PS_SENDSMS_GDPR'));
         foreach ($orderStatuses as $status) {
             $helper->fields_value['PS_SENDSMS_STATUS_' . $status['id_order_state']] = isset($statuses[$status['id_order_state']]) ? $statuses[$status['id_order_state']] : '';
-            //dump(Tools::getValue('PS_SENDSMS_URL_' . $status['id_order_state']));
+            $helper->fields_value['PS_SENDSMS_URL_' . $status['id_order_state'] . '_'] = isset($urls[$status['id_order_state']]) ? $urls[$status['id_order_state']] : '';
+            $helper->fields_value['PS_SENDSMS_GDPR_' . $status['id_order_state'] . '_'] = isset($gdpr[$status['id_order_state']]) ? $gdpr[$status['id_order_state']] : '';
         }
 
         Media::addJsDefL('sendsms_var_name', $this->l(' remaining characters'));
@@ -400,9 +449,11 @@ class PsSendSMS extends Module
 
             $phone = (string)(Tools::getValue('sendsms_phone'));
             $message = (string)(Tools::getValue('sendsms_message'));
+            $short = (Tools::getValue('sendsms_url')) ? true : false;
+            $gdpr = (Tools::getValue('sendsms_gdpr')) ? true : false;
             $phone = Validate::isPhoneNumber($phone) ? $phone : "";
             if (!empty($phone) && !empty($message)) {
-                $this->sendSms($message, 'single order', $phone);
+                $this->sendSms($message, 'single order', $phone, $short, $gdpr);
                 $msg = $this->l('The message has been sent');
                 $msg_error = false;
 
@@ -453,6 +504,8 @@ class PsSendSMS extends Module
         # get params
         $orderId = $params['id_order'];
         $statusId = $params['newOrderStatus']->id;
+        $urls = unserialize(Configuration::get('PS_SENDSMS_URL'));
+        $gdpr = unserialize(Configuration::get('PS_SENDSMS_GDPR'));
 
         # get configuration
         $statuses = unserialize(Configuration::get('PS_SENDSMS_STATUS'));
@@ -489,7 +542,7 @@ class PsSendSMS extends Module
             }
 
             # send sms
-            $this->sendSms($message, 'order', $phone);
+            $this->sendSms($message, 'order', $phone, $urls[$statusId] ? true : false, $gdpr[$statusId] ? true : false);
         }
     }
 
@@ -507,20 +560,21 @@ class PsSendSMS extends Module
         return $phone;
     }
 
-
-
-    public function sendSms($message, $type = 'order', $phone = '')
+    public function sendSms($message, $type = 'order', $phone = '', $short = false, $gdpr = false)
     {
-        if(Configuration::get('PS_SENDSMS_COUNTRY'))
+        if (Configuration::get('PS_SENDSMS_COUNTRY')) {
             $phone = $this->validatePhone($phone);
-        else
+            $simulationPhone = $this->validatePhone(Configuration::get('PS_SENDSMS_SIMULATION_PHONE'));
+        } else {
             $phone = preg_replace("/[^0-9]/", "", $phone);
+            $simulationPhone = preg_replace("/[^0-9]/", "", Configuration::get('PS_SENDSMS_SIMULATION_PHONE'));
+        }
 
         $username = Configuration::get('PS_SENDSMS_USERNAME');
-        $password = Configuration::get('PS_SENDSMS_PASSWORD');
+        $password = PhpEncryption::decrypt(Configuration::get('PS_SENDSMS_PASSWORD'));
         $isSimulation = Configuration::get('PS_SENDSMS_SIMULATION');
-        $simulationPhone = Validate::isPhoneNumber(Configuration::get('PS_SENDSMS_SIMULATION_PHONE')) ? $phone : "";
         $from = Configuration::get('PS_SENDSMS_LABEL');
+        
         if (empty($username) || empty($password)) {
             return false;
         }
@@ -532,27 +586,12 @@ class PsSendSMS extends Module
         if (empty($phone)) {
             return false;
         }
+
         $message = $this->cleanDiacritice($message);
 
         if (!empty(trim($message))) {
-            $curl = curl_init();
-
-            $useragent = $_SERVER['HTTP_USER_AGENT'];
-
-            curl_setopt($curl, CURLOPT_USERAGENT, "SendSMS.RO API Agent for " . $useragent);
-            curl_setopt($curl, CURLOPT_REFERER, _PS_BASE_URL_);
-            curl_setopt($curl, CURLOPT_HEADER, 0);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-            //short url + gdpr
-            curl_setopt($curl, CURLOPT_URL, 'https://api.sendsms.ro/json?action=message_send&username=' . $username . '&password=' . trim($password) . '&from=' . $from . '&to=' . $phone . '&text=' . urlencode($message));
-            curl_setopt($curl, CURLOPT_HTTPHEADER, array("Connection: keep-alive"));
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-
-            //dump('https://api.sendsms.ro/json?action=message_send_gdpr&username=' . $username . '&password=' . trim($password) . '&from=' . $from . '&to=' . $phone . '&text=' . urlencode($message) . '&short=true');
-            //die();
-
-            $status = curl_exec($curl);
-            $status = json_decode($status, true);
+            //add curl
+            $status = $this->makeApiCall('https://api.sendsms.ro/json?action=message_send'. ($gdpr ? "_gdpr" : "" ) .'&username=' . urlencode($username) . '&password=' . urlencode(trim($password)) . '&from=' . urlencode($from) . '&to=' . urlencode($phone) . '&text=' . urlencode($message) . '&short=' . ($short ? 'true' : 'false'));
 
             # history
             Db::getInstance()->insert('ps_sendsms_history', array(
@@ -565,6 +604,26 @@ class PsSendSMS extends Module
                 'sent_on' => date('Y-m-d H:i:s')
             ));
         }
+    }
+
+    public function makeApiCall($url)
+    {
+        $curl = curl_init();
+
+        $useragent = $_SERVER['HTTP_USER_AGENT'];
+
+        curl_setopt($curl, CURLOPT_USERAGENT, "SendSMS.RO API Agent for " . $useragent);
+        curl_setopt($curl, CURLOPT_REFERER, _PS_BASE_URL_);
+        curl_setopt($curl, CURLOPT_HEADER, 0);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+
+        curl_setopt($curl, CURLOPT_URL, $url);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, array("Connection: keep-alive"));
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+        $status = curl_exec($curl);
+        $status = json_decode($status, true);
+
+        return $status;
     }
 
     public function cleanDiacritice($string)
@@ -620,14 +679,14 @@ class PsSendSMS extends Module
     public function validatePhone($phone)
     {
         $phone = preg_replace('/\D/', '', $phone);
-        if (substr($phone, 0, 1) == '0' && strlen($phone) == 10) {
+        if (Tools::substr($phone, 0, 1) == '0' && Tools::strlen($phone) == 10) {
             $phone = '4'.$phone;
-        } elseif (substr($phone, 0, 1) != '0' && strlen($phone) == 9) {
+        } elseif (Tools::substr($phone, 0, 1) != '0' && Tools::strlen($phone) == 9) {
             $phone = '40'.$phone;
-        } elseif (strlen($phone) == 13 && substr($phone, 0, 2) == '00') {
-            $phone = substr($phone, 2);
+        } elseif (Tools::strlen($phone) == 13 && Tools::substr($phone, 0, 2) == '00') {
+            $phone = Tools::substr($phone, 2);
         }
-        if (strlen($phone) < 11) {
+        if (Tools::strlen($phone) < 11) {
             return false;
         }
         return $phone;

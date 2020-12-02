@@ -40,7 +40,7 @@ class AdminCampaign extends ModuleAdminController
         $price_checked = (string)(Tools::getValue('price_checked'));
         if (!empty($price_checked)) {
             $username = Configuration::get('PS_SENDSMS_USERNAME');
-            $password = trim(PhpEncryption::decrypt(Configuration::get('PS_SENDSMS_PASSWORD')));
+            $password = trim(Configuration::get('PS_SENDSMS_PASSWORD'));
 
             $lenght = Tools::strlen(Configuration::get('PS_SENDSMS_CAMPAIGN_MESSAGE'));
             $messages_to_send = 0;
@@ -53,7 +53,8 @@ class AdminCampaign extends ModuleAdminController
             }
 
             $price = 0;
-            foreach (unserialize(Configuration::get('PS_SENDSMS_CAMPAIGN_PHONES')) as $phone) {
+            $phones = json_decode(Configuration::get('PS_SENDSMS_CAMPAIGN_PHONES'), true) ? json_decode(Configuration::get('PS_SENDSMS_CAMPAIGN_PHONES'), true) : array();
+            foreach ($phones as $phone) {
                 if (Configuration::get('PS_SENDSMS_COUNTRY')) {
                     $phone = $this->module->validatePhone($phone);
                 } else {
@@ -247,7 +248,7 @@ class AdminCampaign extends ModuleAdminController
         );
 
         $message = (string)(Configuration::get('PS_SENDSMS_CAMPAIGN_MESSAGE'));
-        $phones = unserialize(Configuration::get('PS_SENDSMS_CAMPAIGN_PHONES'));
+        $phones = json_decode(Configuration::get('PS_SENDSMS_CAMPAIGN_PHONES'), true);
         $short = Configuration::get('PS_SENDSMS_CAMPAIGN_SHORT');
         $gdpr = Configuration::get('PS_SENDSMS_CAMPAIGN_GDPR');
         
@@ -291,7 +292,7 @@ class AdminCampaign extends ModuleAdminController
 
             #add
             Configuration::updateValue('PS_SENDSMS_CAMPAIGN_MESSAGE', $message);
-            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_PHONES', serialize($phones));
+            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_PHONES', json_encode($phones));
             Configuration::updateValue('PS_SENDSMS_CAMPAIGN_SHORT', $short);
             Configuration::updateValue('PS_SENDSMS_CAMPAIGN_GDPR', $gdpr);
 

@@ -46,7 +46,7 @@ class PsSendSMS extends Module
 
         $this->name = 'pssendsms';
         $this->tab = 'advertising_marketing';
-        $this->version = '1.0.8';
+        $this->version = '1.0.9';
         $this->author = 'Any Place Media SRL';
         $this->module_key = '01417c91c848ebbc67f458d260e61f98';
         $this->need_instance = 0;
@@ -171,7 +171,7 @@ class PsSendSMS extends Module
         $customer_credit = $this->l('Please configure your module first.');
 
         $username = Tools::getValue('PS_SENDSMS_USERNAME') ? (string)(Tools::getValue('PS_SENDSMS_USERNAME')) : (string)(Configuration::get('PS_SENDSMS_USERNAME'));
-        $password = Tools::getValue('PS_SENDSMS_PASSWORD') ? (string)(Tools::getValue('PS_SENDSMS_PASSWORD')) : (string)(PhpEncryption::decrypt(Configuration::get('PS_SENDSMS_PASSWORD')));
+        $password = Tools::getValue('PS_SENDSMS_PASSWORD') ? (string)(Tools::getValue('PS_SENDSMS_PASSWORD')) : (string)(Configuration::get('PS_SENDSMS_PASSWORD'));
 
         if (!empty($username) && !empty($password)) {
             //check balance
@@ -212,14 +212,14 @@ class PsSendSMS extends Module
                 }
                 Configuration::updateValue('PS_SENDSMS_USERNAME', $username);
                 if (!empty($password)) {
-                    Configuration::updateValue('PS_SENDSMS_PASSWORD', PhpEncryption::encrypt($password));
+                    Configuration::updateValue('PS_SENDSMS_PASSWORD', $password);
                 }
                 Configuration::updateValue('PS_SENDSMS_LABEL', $label);
                 Configuration::updateValue('PS_SENDSMS_SIMULATION', !empty($isSimulation) ? 1 : 0);
-                Configuration::updateValue('PS_SENDSMS_STATUS', serialize($statuses));
+                Configuration::updateValue('PS_SENDSMS_STATUS', json_encode($statuses));
                 Configuration::updateValue('PS_SENDSMS_COUNTRY', !empty($country) ? 1 : 0);
-                Configuration::updateValue('PS_SENDSMS_URL', serialize($short));
-                Configuration::updateValue('PS_SENDSMS_GDPR', serialize($gdpr));
+                Configuration::updateValue('PS_SENDSMS_URL', json_encode($short));
+                Configuration::updateValue('PS_SENDSMS_GDPR', json_encode($gdpr));
                 $output .= $this->displayConfirmation($this->l('The settings have been updated'));
             }
         }
@@ -248,7 +248,7 @@ class PsSendSMS extends Module
                     'label' => $this->l('User name'),
                     'name' => 'PS_SENDSMS_USERNAME',
                     'required' => true,
-                    'desc' => $this->l('Don\'t have sendSMS account? Sign up for FREE ') . '<a href="https://hub.sendsms.ro/en/login" target="_blank">' . $this->l('here') . '</a>.' . $this->l('You can find more details about sendSMS ') . '<a href="http://www.sendsms.ro/en" target="_blank">' . $this->l('here') . '</a>.'
+                    'desc' => $this->context->smarty->fetch($this->local_path . 'views/templates/admin/desc-username.tpl'),
                 ),
                 array(
                     'type' => 'password',
@@ -318,21 +318,22 @@ class PsSendSMS extends Module
         );
         $orderStatuses = OrderState::getOrderStates($this->context->language->id);
         foreach ($orderStatuses as $status) {
+            $example = (isset($defaults[$status['id_order_state']]) ? $this->l('Ex: ') . $defaults[$status['id_order_state']] : '');
+            $status_name = $status['name'];
+            $this->context->smarty->assign([
+                'example' => $example,
+            ]);
+            $this->context->smarty->assign([
+                'status_name' => $status_name,
+            ]);
             $this->fields_form[0]['form']['input'][] = array(
                 'type' => 'textarea',
                 'rows' => 7,
-                'label' => $this->l('Message: ') . '<stg>' . $status['name'] . '</stg>' . '<br /><br />' . $this->l('Available variables:') . '<button type="button" class="ps_sendsms_button">{billing_first_name}</button> 
-                    <button type="button" class="ps_sendsms_button">{billing_last_name}</button> 
-                    <button type="button" class="ps_sendsms_button">{shipping_first_name}</button> 
-                    <button type="button" class="ps_sendsms_button">{shipping_last_name}</button>
-                    <button type="button" class="ps_sendsms_button">{tracking_number}</button> 
-                    <button type="button" class="ps_sendsms_button">{order_number}</button> 
-                    <button type="button" class="ps_sendsms_button">{order_date}</button> 
-                    <button type="button" class="ps_sendsms_button">{order_total}</button>' . '<br /><br />' . $this->l('Leave the field blank if you do not want to send SMS for this status.'),
+                'label' => $this->context->smarty->fetch($this->local_path . 'views/templates/admin/label-content.tpl'),
                 'name' => 'PS_SENDSMS_STATUS_' . $status['id_order_state'],
                 'required' => false,
                 'class' => 'ps_sendsms_content',
-                'desc' => '<div>' . (isset($defaults[$status['id_order_state']]) ? $this->l('Ex: ') . $defaults[$status['id_order_state']] : '') . '</div>'
+                'desc' => $this->context->smarty->fetch($this->local_path . 'views/templates/admin/desc-content.tpl')
             );
             $this->fields_form[0]['form']['input'][] = array(
                 'type' => 'checkbox',
@@ -406,16 +407,16 @@ class PsSendSMS extends Module
 
         // Load current value
         $helper->fields_value['PS_SENDSMS_USERNAME'] = Configuration::get('PS_SENDSMS_USERNAME');
-        $helper->fields_value['PS_SENDSMS_PASSWORD'] = PhpEncryption::decrypt(Configuration::get('PS_SENDSMS_PASSWORD'));
+        $helper->fields_value['PS_SENDSMS_PASSWORD'] = Configuration::get('PS_SENDSMS_PASSWORD');
         $helper->fields_value['PS_SENDSMS_LABEL'] = Configuration::get('PS_SENDSMS_LABEL');
         $helper->fields_value['PS_SENDSMS_SIMULATION_'] = Configuration::get('PS_SENDSMS_SIMULATION');
         $helper->fields_value['PS_SENDSMS_SIMULATION_PHONE'] = Configuration::get('PS_SENDSMS_SIMULATION_PHONE');
         $helper->fields_value['PS_SENDSMS_COUNTRY_'] = Configuration::get('PS_SENDSMS_COUNTRY');
         
 
-        $statuses = unserialize(Configuration::get('PS_SENDSMS_STATUS'));
-        $urls = unserialize(Configuration::get('PS_SENDSMS_URL'));
-        $gdpr = unserialize(Configuration::get('PS_SENDSMS_GDPR'));
+        $statuses = json_decode(Configuration::get('PS_SENDSMS_STATUS'), true);
+        $urls = json_decode(Configuration::get('PS_SENDSMS_URL'), true);
+        $gdpr = json_decode(Configuration::get('PS_SENDSMS_GDPR'), true);
         foreach ($orderStatuses as $status) {
             $helper->fields_value['PS_SENDSMS_STATUS_' . $status['id_order_state']] = isset($statuses[$status['id_order_state']]) ? $statuses[$status['id_order_state']] : '';
             $helper->fields_value['PS_SENDSMS_URL_' . $status['id_order_state'] . '_'] = isset($urls[$status['id_order_state']]) ? $urls[$status['id_order_state']] : '';
@@ -504,11 +505,11 @@ class PsSendSMS extends Module
         # get params
         $orderId = $params['id_order'];
         $statusId = $params['newOrderStatus']->id;
-        $urls = unserialize(Configuration::get('PS_SENDSMS_URL'));
-        $gdpr = unserialize(Configuration::get('PS_SENDSMS_GDPR'));
+        $urls = json_decode(Configuration::get('PS_SENDSMS_URL'), true);
+        $gdpr = json_decode(Configuration::get('PS_SENDSMS_GDPR'), true);
 
         # get configuration
-        $statuses = unserialize(Configuration::get('PS_SENDSMS_STATUS'));
+        $statuses = json_decode(Configuration::get('PS_SENDSMS_STATUS'), true);
         if (isset($statuses[$statusId])) {
             # get order details
             $order = new Order($orderId);
@@ -571,7 +572,7 @@ class PsSendSMS extends Module
         }
 
         $username = Configuration::get('PS_SENDSMS_USERNAME');
-        $password = PhpEncryption::decrypt(Configuration::get('PS_SENDSMS_PASSWORD'));
+        $password = Configuration::get('PS_SENDSMS_PASSWORD');
         $isSimulation = Configuration::get('PS_SENDSMS_SIMULATION');
         $from = Configuration::get('PS_SENDSMS_LABEL');
         

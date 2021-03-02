@@ -46,7 +46,7 @@ class PsSendSMS extends Module
 
         $this->name = 'pssendsms';
         $this->tab = 'advertising_marketing';
-        $this->version = '1.0.10';
+        $this->version = '1.0.11';
         $this->author = 'Any Place Media SRL';
         $this->module_key = '01417c91c848ebbc67f458d260e61f98';
         $this->need_instance = 0;
@@ -549,6 +549,8 @@ class PsSendSMS extends Module
 
     public function selectPhone($phone, $mobile)
     {
+        $phone = trim($phone);
+        $mobile = trim($mobile);
         # if both, prefer mobile
         if (!empty($phone) && !empty($mobile)) {
             return $mobile;
@@ -557,7 +559,7 @@ class PsSendSMS extends Module
         if (!empty($mobile)) {
             return $mobile;
         }
-
+    
         return $phone;
     }
 

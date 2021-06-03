@@ -116,7 +116,11 @@ class AdminSendTest extends ModuleAdminController
                 $this->module->sendSms($message, 'test', $phone, $short, $gdpr);
                 Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token);
             } else {
-                $this->errors[] = Tools::displayError($this->module->l('The phone number is not valid'));
+                if (empty($phone)) {
+                    $this->errors[] = Tools::displayError($this->module->l('The phone number is not valid'));
+                } elseif (empty($message)) {
+                    $this->errors[] = Tools::displayError($this->module->l('Please enter e message'));
+                }
             }
         }
     }

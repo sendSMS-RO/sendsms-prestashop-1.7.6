@@ -15,12 +15,11 @@
 class AdminCampaign extends ModuleAdminController
 {
     protected $index;
-    protected $indexError;
-
+    public $cookieManager;
     public function __construct()
     {
         parent::__construct();
-
+        $this->cookieManager = $this->context->cookie;
         $this->bootstrap = true;
 
         $this->context = Context::getContext();
@@ -28,47 +27,14 @@ class AdminCampaign extends ModuleAdminController
         $this->table = 'sendsms_campaign';
         $this->display = 'add';
 
-        $this->indexError = count($this->_error) + 1;
-
-        $this->_error[$this->indexError] = $this->module->l('You must choose at least one phone number and enter a message');
+        $error = strval(Tools::getValue('error'));
+        if (!empty($error)) {
+            $this->errors[] = Tools::displayError($this->module->l('The phone number is not valid'));
+        }
 
         $sent = (string)(Tools::getValue('sent'));
         if (!empty($sent)) {
             $this->confirmations = array($this->module->l('The message was sent'));
-        }
-
-        $price_checked = (string)(Tools::getValue('price_checked'));
-        if (!empty($price_checked)) {
-            $username = Configuration::get('PS_SENDSMS_USERNAME');
-            $password = trim(Configuration::get('PS_SENDSMS_PASSWORD'));
-
-            $lenght = Tools::strlen(Configuration::get('PS_SENDSMS_CAMPAIGN_MESSAGE'));
-            $messages_to_send = 0;
-            $messages = $lenght / 160 + 1;
-            if ($lenght > 0) {
-                if ($lenght % 160 == 0) {
-                    $messages--;
-                }
-                $messages_to_send = floor($messages);
-            }
-
-            $price = 0;
-            $phones = json_decode(Configuration::get('PS_SENDSMS_CAMPAIGN_PHONES'), true) ? json_decode(Configuration::get('PS_SENDSMS_CAMPAIGN_PHONES'), true) : array();
-            foreach ($phones as $phone) {
-                if (Configuration::get('PS_SENDSMS_COUNTRY')) {
-                    $phone = $this->module->validatePhone($phone);
-                } else {
-                    $phone = preg_replace("/[^0-9]/", "", $phone);
-                }
-                $status = $this->module->makeApiCall('https://api.sendsms.ro/json?action=route_check_price' .'&username=' . urlencode($username) . '&password=' . urlencode($password) . '&to=' . urlencode($phone));
-                if ($status['details']['status'] === 64) {
-                    $multiplier = $status['details']['cost'];
-                } else {
-                    $multiplier = 0;
-                }
-                $price += $multiplier * $messages_to_send;
-            }
-            $this->informations = array($this->module->l('The price of the messages will be approximately ') . $price . $this->module->l(' euros'));
         }
 
         $this->index = count($this->_conf) + 1;
@@ -144,7 +110,6 @@ class AdminCampaign extends ModuleAdminController
             )
         );
 
-
         # jqueryui
         $this->context->controller->addJQueryPlugin('select2');
 
@@ -155,19 +120,31 @@ class AdminCampaign extends ModuleAdminController
         $billingStates = array();
 
         if (Configuration::get('PS_SENDSMS_PRODUCTS')) {
-            $products = Configuration::get('PS_SENDSMS_PRODUCTS') ? explode('|', Configuration::get('PS_SENDSMS_PRODUCTS')) : array();
+            //in modulul de 1.6 folosim "," inloc de ',' deoarece cookiurile nu permit salvarea caracterului ','
+            $products = Configuration::get('PS_SENDSMS_PRODUCTS') ? explode(',', Configuration::get('PS_SENDSMS_PRODUCTS')) : array();
         }
         if (Configuration::get('PS_SENDSMS_STATES')) {
-            $billingStates = Configuration::get('PS_SENDSMS_STATES') ? explode('|', Configuration::get('PS_SENDSMS_STATES')) : array();
+            $billingStates = Configuration::get('PS_SENDSMS_STATES') ? explode(',', Configuration::get('PS_SENDSMS_STATES')) : array();
         }
         $numbers = $this->filterPhones($periodStart, $periodEnd, $amount, $products, $billingStates);
-        
+
+        //dummy phones
+        // for ($i = 0; $i < 3000; $i++) {
+        //     $number = "4021" . $this->randomNumberSequence();
+        //     $numbers[] = array('phone' => $number, 'label' => $number);
+        // }
         # set form values
         $this->fields_value['sendsms_period_start'] = $periodStart;
         $this->fields_value['sendsms_period_end'] = $periodEnd;
         $this->fields_value['sendsms_amount'] = $amount;
         $this->fields_value['sendsms_products[]'] = $products;
         $this->fields_value['sendsms_billing_states[]'] = $billingStates;
+
+        $this->cookieManager->__set('sendsms_period_start', $periodStart);
+        $this->cookieManager->__set('sendsms_period_end', $periodEnd);
+        $this->cookieManager->__set('sendsms_amount', $amount);
+        $this->cookieManager->__set('sendsms_products', (Configuration::get('PS_SENDSMS_PRODUCTS') ? Configuration::get('PS_SENDSMS_PRODUCTS') :""));
+        $this->cookieManager->__set('sendsms_billing_states', (Configuration::get('PS_SENDSMS_STATES') ? Configuration::get('PS_SENDSMS_STATES') : ""));
 
         $form1 = parent::renderForm();
 
@@ -181,9 +158,26 @@ class AdminCampaign extends ModuleAdminController
                     'rows' => 7,
                     'label' => $this->module->l('Message'),
                     'name' => 'sendsms_message',
+                    'id' => 'sendsms_message',
                     'required' => true,
                     'class' => 'ps_sendsms_content',
                     'desc' => $this->module->l(' characters remained.')
+                ),
+                array(
+                    'type' => 'checkbox',
+                    'label' => $this->l('Select all phones?'),
+                    'name' => 'sendsms_all',
+                    'required' => false,
+                    'values' => array(
+                        'query' => array(
+                            array(
+                                'all' => null,
+                            )
+                        ),
+                        'id' => 'all',
+                        'name' => 'all'
+                    ),
+                    'desc' => $this->l('You will not need to select any phone number from the field below'),
                 ),
                 array(
                     'type' => 'select',
@@ -196,53 +190,26 @@ class AdminCampaign extends ModuleAdminController
                         'id' => 'phone',
                         'name' => 'label'
                     ),
-                    'desc' => count($numbers) . $this->module->l(' phone number(s)')
-                ),
-                array(
-                    'type' => 'checkbox',
-                    'label' => $this->l('Short url?'),
-                    'name' => 'sendsms_url',
-                    'required' => false,
-                    'values' => array(
-                        'query' => array(
-                            array(
-                                'url' => null,
-                            )
-                        ),
-                        'id' => 'url',
-                        'name' => 'url'
-                    ),
-                    'desc' => 'Please use only urls that start with https:// or http://'
-                ),
-                array(
-                    'type' => 'checkbox',
-                    'label' => $this->l('Add an unsubscribe link?'),
-                    'name' => 'sendsms_gdpr',
-                    'required' => false,
-                    'values' => array(
-                        'query' => array(
-                            array(
-                                'gdpr' => null,
-                            )
-                        ),
-                        'id' => 'gdpr',
-                        'name' => 'gdpr'
-                    ),
-                    'desc' => 'You must specify {gdpr} key message. {gdpr} key will be replaced automaticaly with confirmation unique confirmation link. If {gdpr} key is not specified confirmation link will be placed at the end of message.'
+                    'desc' => count($numbers) . $this->module->l(' phone number(s)'),
+                    'id' => 'sendsms_phone_numbers'
                 )
-            ),
-            'submit' => array(
-                'title' => $this->module->l('Send'),
-                'class' => 'btn btn-default',
-                'name' => 'send'
             ),
             'buttons' => array(
                 'check' => array(
-                    'type' => 'submit',
+                    'type' => 'button',
                     'title' => $this->l('Estimate cost'),
                     'name' => 'check-price',
                     'icon' => 'process-icon-preview',
                     'class' => 'btn btn-default pull-right',
+                    'id' => 'check-price'
+                ),
+                'submit' => array(
+                    'type' => 'button',
+                    'icon' => 'process-icon-save-and-stay',
+                    'title' => $this->module->l('Send'),
+                    'class' => 'btn btn-default',
+                    'name' => 'send',
+                    'id' => 'send-campaign'
                 )
             )
         );
@@ -251,7 +218,7 @@ class AdminCampaign extends ModuleAdminController
         $phones = json_decode(Configuration::get('PS_SENDSMS_CAMPAIGN_PHONES'), true);
         $short = Configuration::get('PS_SENDSMS_CAMPAIGN_SHORT');
         $gdpr = Configuration::get('PS_SENDSMS_CAMPAIGN_GDPR');
-        
+
         # set form values
         $this->fields_value['sendsms_message'] = $message;
         $this->fields_value['sendsms_phone_numbers[]'] = $phones;
@@ -263,9 +230,16 @@ class AdminCampaign extends ModuleAdminController
         return $form1 . $form2;
     }
 
-    public function setMedia()
+    public function setMedia($isNewTheme = false)
     {
         Media::addJsDefL('sendsms_var_name', $this->module->l(' remaining characters'));
+        Media::addJsDefL('sendsms_price_per_phone', Configuration::get('PS_SENDSMS_PRICE_PER_PHONE', null, null, null, 0));
+        Media::addJsDefL('sendsms_text_no_message', $this->module->l('Please enter a message first.'));
+        Media::addJsDefL('sendsms_text_send_first', $this->module->l('Please send an SMS first.'));
+        Media::addJsDefL('sendsms_text_estimate_price', $this->module->l('The estimate price is '));
+        Media::addJsDefL('sendsms_text_sending', $this->module->l('Sending...'));
+        Media::addJsDefL('sendsms_text_send', $this->module->l('Send'));
+
         parent::setMedia();
 
         # js
@@ -280,57 +254,80 @@ class AdminCampaign extends ModuleAdminController
         $this->context->controller->addCSS(
             Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/css/adminCampaign.css'
         );
+
+        $this->context->controller->addJS(
+            Tools::getShopDomainSsl(true, true) . __PS_BASE_URI__ . 'modules/' . $this->module->name . '/views/js/campaign.js'
+        );
     }
 
     public function postProcess()
     {
-        if (Tools::isSubmit('check-price')) {
-            $message = (string)(Tools::getValue('sendsms_message'));
-            $phones = Tools::getValue('sendsms_phone_numbers');
-            $short = Tools::getValue('sendsms_url_') ? true : false;
-            $gdpr = Tools::getValue('sendsms_gdpr_') ? true : false;
-
-            #add
-            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_MESSAGE', $message);
-            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_PHONES', json_encode($phones));
-            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_SHORT', $short);
-            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_GDPR', $gdpr);
-
-            Tools::redirectAdmin(self::$currentIndex . '&price_checked=1&token=' . $this->token);
-        } elseif (Tools::isSubmit('send')) {
-            $message = (string)(Tools::getValue('sendsms_message'));
-            $phones = Tools::getValue('sendsms_phone_numbers');
-            $back = $_SERVER['HTTP_REFERER'];
-            $short = Tools::getValue('sendsms_url_') ? true : false;
-            $gdpr = Tools::getValue('sendsms_gdpr_') ? true : false;
-
-            #delete
-            Configuration::updateValue('PS_SENDSMS_PRODUCTS', null);
-            Configuration::updateValue('PS_SENDSMS_STATES', null);
-            Configuration::updateValue('PS_SENDSMS_ORDER_AMOUNT', null);
-            Configuration::updateValue('PS_SENDSMS_END_PERIOD', null);
-            Configuration::updateValue('PS_SENDSMS_START_PERIOD', null);
-            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_PHONES', null);
-            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_SHORT', null);
-            Configuration::updateValue('PS_SENDSMS_CAMPAIGN_GDPR', null);
-
-            if (empty($message) || empty($phones)) {
-                if (!empty($back)) {
-                    Tools::redirectAdmin($back . '&error=2');
-                } else {
-                    Tools::redirectAdmin(self::$currentIndex . '&error=2&token=' . $this->token);
+        if (Tools::getValue('method') === 'sendCampaign') {
+            error_log("procesare ajax");
+            $sendsms_period_start = $this->cookieManager->__get('sendsms_period_start');
+            $sendsms_period_end = $this->cookieManager->__get('sendsms_period_end');
+            $sendsms_amount = $this->cookieManager->__get('sendsms_amount');
+            $sendsms_products = "";
+            $sendsms_billing_states = "";
+            if (!empty($this->cookieManager->__get('sendsms_products'))) {
+                $sendsms_products = explode(',', $this->cookieManager->__get('sendsms_products'));
+            }
+            if (!empty($this->cookieManager->__get('sendsms_billing_states'))) {
+                $sendsms_billing_states = explode(',', $this->cookieManager->__get('sendsms_billing_states'));
+            }
+            $all = Tools::getValue('all');
+            $content = Tools::getValue('content');
+            $phones = array();
+            if (empty($content)) {
+                die(json_encode(array('hasError' => true, 'error' => $this->module->l('Your message box is empty'))));
+            }
+            if ($all === "true") {
+                $this->filterPhones($sendsms_period_start, $sendsms_period_end, $sendsms_amount, $sendsms_products, $sendsms_billing_states, $phones);
+            } else {
+                if (Tools::getValue('phones') != "") {
+                    $phones = explode(',', Tools::getValue('phones', false));
+                }
+            }
+            if (count($phones) === 0) {
+                die(json_encode(array('hasError' => true, 'error' => $this->module->l('Please select at least one phone number'))));
+            }
+            $fileUrl = _PS_MODULE_DIR_ . $this->module->name . "/batches/batch.csv";
+            $file = fopen($fileUrl, "w");
+            if ($file) {
+                $from = Configuration::get('PS_SENDSMS_LABEL');
+                if (empty($from)) {
+                    die(json_encode(array('hasError' => true, 'error' => $this->module->l('Please add a label in the configuration page'))));
+                }
+                $headers = array(
+                    "message",
+                    "to",
+                    "from"
+                );
+                fputcsv($file, $headers);
+                foreach ($phones as $phone) {
+                    fputcsv($file, array(
+                        $content,
+                        $this->module->validatePhone($phone),
+                        $from
+                    ), ',', '"', "\0");
+                }
+                $result = $this->module->createBatch($fileUrl);
+                fclose($file);
+                if (!unlink($fileUrl)) {
+                    die(json_encode(array('hasError' => true, 'error' => $this->module->l("Unable to delete the batch file! Please check file/folder permisions ($fileUrl)"))));
+                }
+                if ($result === 0) {
+                    die(json_encode(array('response' => $this->module->l('Success'))));
+                } elseif ($result === -1) {
+                    die(json_encode(array('hasError' => true, 'error' => $this->module->l('Please check your username/password/label.'))));
+                } elseif ($result === -2) {
+                    die(json_encode(array('hasError' => true, 'error' => $this->module->l('Batch sending error. Check your php error_log file'))));
                 }
             } else {
-                # send sms
-                foreach ($phones as $phone) {
-                    $phone = Validate::isPhoneNumber($phone) ? $phone : "";
-                    if (!empty($phone)) {
-                        $this->module->sendSms($message, 'campaign', $phone, $short, $gdpr);
-                    }
-                }
-                Tools::redirectAdmin(self::$currentIndex . '&sent=1&token=' . $this->token);
+                die(json_encode(array('hasError' => true, 'error' => "Unable to open/create batch file! Please check file/folder permisions ($fileUrl)")));
             }
-        } elseif (Tools::isSubmit('submitAdd' . $this->table)) {
+        }
+        if (Tools::isSubmit('submitAdd' . $this->table)) {
             $periodStart = (string)(Tools::getValue('sendsms_period_start'));
             $periodEnd = (string)(Tools::getValue('sendsms_period_end'));
             $amount = (string)(Tools::getValue('sendsms_amount'));
@@ -338,21 +335,20 @@ class AdminCampaign extends ModuleAdminController
             Configuration::updateValue('PS_SENDSMS_END_PERIOD', $periodEnd, true);
             Configuration::updateValue('PS_SENDSMS_ORDER_AMOUNT', $amount, true);
             if (Tools::getValue('sendsms_products')) {
-                Configuration::updateValue('PS_SENDSMS_PRODUCTS', implode("|", Tools::getValue('sendsms_products')), true);
+                Configuration::updateValue('PS_SENDSMS_PRODUCTS', implode(',', Tools::getValue('sendsms_products')), true);
             } else {
                 Configuration::updateValue('PS_SENDSMS_PRODUCTS', null);
             }
             if (Tools::getValue('sendsms_billing_states')) {
-                Configuration::updateValue('PS_SENDSMS_STATES', implode("|", Tools::getValue('sendsms_billing_states')), true);
+                Configuration::updateValue('PS_SENDSMS_STATES', implode(',', Tools::getValue('sendsms_billing_states')), true);
             } else {
                 Configuration::updateValue('PS_SENDSMS_STATES', null);
             }
-
             Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token);
         }
     }
 
-    private function filterPhones($periodStart, $periodEnd, $amount, $products, $billingStates)
+    private function filterPhones($periodStart, $periodEnd, $amount, $products, $billingStates, &$phones = array())
     {
         $sql = new DbQuery();
         $sql->select('a.phone, a.phone_mobile');
@@ -435,5 +431,14 @@ class AdminCampaign extends ModuleAdminController
         $this->page_header_toolbar_title = $this->module->l('SMS Campaign');
         parent::initPageHeaderToolbar();
         unset($this->toolbar_btn['new']);
+    }
+
+    private function randomNumberSequence($requiredLength = 7, $highestDigit = 8)
+    {
+        $sequence = '';
+        for ($i = 0; $i < $requiredLength; ++$i) {
+            $sequence .= mt_rand(0, $highestDigit);
+        }
+        return $sequence;
     }
 }

@@ -12,6 +12,8 @@
  *  @license   AFL
  */
 
+use PrestaShopBundle\Entity\Repository\TabRepositoryp;
+
 if (!defined('_PS_VERSION_')) {
     exit;
 }
@@ -29,7 +31,7 @@ class PsSendSMS extends Module
         'PS_SENDSMS_STATUS',
         'PS_SENDSMS_PRODUCTS',
         'PS_SENDSMS_STATES',
-        'PS_SENDSMS_COUNTRY',
+        'PS_SENDSMS_COUNTRYCODE',
         'PS_SENDSMS_URL',
         'PS_SENDSMS_GDPR',
         'PS_SENDSMS_START_PERIOD',
@@ -38,7 +40,9 @@ class PsSendSMS extends Module
         'PS_SENDSMS_CAMPAIGN_MESSAGE',
         'PS_SENDSMS_CAMPAIGN_PHONES',
         'PS_SENDSMS_CAMPAIGN_SHORT',
-        'PS_SENDSMS_CAMPAIGN_GDPR'
+        'PS_SENDSMS_CAMPAIGN_GDPR',
+        'PS_SENDSMS_PRICE_PER_PHONE',
+        'PS_SENDSMS_PRICE_TIMEOUT'
     );
 
     public function __construct()
@@ -46,7 +50,7 @@ class PsSendSMS extends Module
 
         $this->name = 'pssendsms';
         $this->tab = 'advertising_marketing';
-        $this->version = '1.0.11';
+        $this->version = '1.0.12';
         $this->author = 'Any Place Media SRL';
         $this->module_key = '01417c91c848ebbc67f458d260e61f98';
         $this->need_instance = 0;
@@ -162,7 +166,7 @@ class PsSendSMS extends Module
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -177,17 +181,17 @@ class PsSendSMS extends Module
             //check balance
             $status = $this->makeApiCall('http://api.sendsms.ro/json?action=user_get_balance&username=' . urlencode($username) . '&password=' . urlencode(trim($password)));
             if ($status['status'] >= 0) {
-                $customer_credit = $this->l('Your current credit is ') . $status['details'] . $this->l(' euro') ;
+                $customer_credit = $this->l('Your current credit is ') . $status['details'] . $this->l(' euro');
             }
         }
         $output = null;
         if (Tools::isSubmit('submit' . $this->name)) {
             # get info
-            
+
             $label = (string)(Tools::getValue('PS_SENDSMS_LABEL'));
             $isSimulation = (string)(Tools::getValue('PS_SENDSMS_SIMULATION_'));
             $simulationPhone = (string)(Tools::getValue('PS_SENDSMS_SIMULATION_PHONE'));
-            $country = (string)(Tools::getValue('PS_SENDSMS_COUNTRY_'));
+            $countrycode = (string)(Tools::getValue('PS_SENDSMS_COUNTRYCODE'));
 
             $short = array();
             $statuses = array();
@@ -217,7 +221,7 @@ class PsSendSMS extends Module
                 Configuration::updateValue('PS_SENDSMS_LABEL', $label);
                 Configuration::updateValue('PS_SENDSMS_SIMULATION', !empty($isSimulation) ? 1 : 0);
                 Configuration::updateValue('PS_SENDSMS_STATUS', json_encode($statuses));
-                Configuration::updateValue('PS_SENDSMS_COUNTRY', !empty($country) ? 1 : 0);
+                Configuration::updateValue('PS_SENDSMS_COUNTRYCODE', !empty($countrycode) ? $countrycode : "INT");
                 Configuration::updateValue('PS_SENDSMS_URL', json_encode($short));
                 Configuration::updateValue('PS_SENDSMS_GDPR', json_encode($gdpr));
                 $output .= $this->displayConfirmation($this->l('The settings have been updated'));
@@ -234,6 +238,8 @@ class PsSendSMS extends Module
 
     public function displayForm()
     {
+        include "cc.php";
+
         // Get default language
         $default_lang = (int)Configuration::get('PS_LANG_DEFAULT');
 
@@ -286,18 +292,14 @@ class PsSendSMS extends Module
                     'required' => false
                 ),
                 array(
-                    'type' => 'checkbox',
-                    'label' => $this->l('Romanian store?'),
-                    'name' => 'PS_SENDSMS_COUNTRY',
+                    'type' => 'select',
+                    'label' => $this->l('Country Code'),
+                    'name' => 'PS_SENDSMS_COUNTRYCODE',
                     'required' => false,
-                    'values' => array(
-                        'query' => array(
-                            array(
-                                'country' => null,
-                            )
-                        ),
-                        'id' => 'country',
-                        'name' => 'country'
+                    'options' => array(
+                        'query' => $country_codes,
+                        'id' => 'value',
+                        'name' => 'label'
                     )
                 )
             )
@@ -411,8 +413,7 @@ class PsSendSMS extends Module
         $helper->fields_value['PS_SENDSMS_LABEL'] = Configuration::get('PS_SENDSMS_LABEL');
         $helper->fields_value['PS_SENDSMS_SIMULATION_'] = Configuration::get('PS_SENDSMS_SIMULATION');
         $helper->fields_value['PS_SENDSMS_SIMULATION_PHONE'] = Configuration::get('PS_SENDSMS_SIMULATION_PHONE');
-        $helper->fields_value['PS_SENDSMS_COUNTRY_'] = Configuration::get('PS_SENDSMS_COUNTRY');
-        
+        $helper->fields_value['PS_SENDSMS_COUNTRYCODE'] = Configuration::get('PS_SENDSMS_COUNTRYCODE');
 
         $statuses = json_decode(Configuration::get('PS_SENDSMS_STATUS'), true);
         $urls = json_decode(Configuration::get('PS_SENDSMS_URL'), true);
@@ -523,7 +524,7 @@ class PsSendSMS extends Module
 
             # get billing phone number
             $phone = Validate::isPhoneNumber($this->selectPhone($billingAddress->phone, $billingAddress->phone_mobile)) ? $this->selectPhone($billingAddress->phone, $billingAddress->phone_mobile) : "";
-            
+
             $currency = new Currency($order->id_currency);
 
             # transform variables
@@ -559,25 +560,20 @@ class PsSendSMS extends Module
         if (!empty($mobile)) {
             return $mobile;
         }
-    
+
         return $phone;
     }
 
     public function sendSms($message, $type = 'order', $phone = '', $short = false, $gdpr = false)
     {
-        if (Configuration::get('PS_SENDSMS_COUNTRY')) {
-            $phone = $this->validatePhone($phone);
-            $simulationPhone = $this->validatePhone(Configuration::get('PS_SENDSMS_SIMULATION_PHONE'));
-        } else {
-            $phone = preg_replace("/[^0-9]/", "", $phone);
-            $simulationPhone = preg_replace("/[^0-9]/", "", Configuration::get('PS_SENDSMS_SIMULATION_PHONE'));
-        }
+        $phone = $this->validatePhone($phone);
+        $simulationPhone = $this->validatePhone(Configuration::get('PS_SENDSMS_SIMULATION_PHONE'));
 
         $username = Configuration::get('PS_SENDSMS_USERNAME');
         $password = Configuration::get('PS_SENDSMS_PASSWORD');
         $isSimulation = Configuration::get('PS_SENDSMS_SIMULATION');
         $from = Configuration::get('PS_SENDSMS_LABEL');
-        
+
         if (empty($username) || empty($password)) {
             return false;
         }
@@ -593,8 +589,7 @@ class PsSendSMS extends Module
         $message = $this->cleanDiacritice($message);
 
         if (!empty(trim($message))) {
-            //add curl
-            $status = $this->makeApiCall('https://api.sendsms.ro/json?action=message_send'. ($gdpr ? "_gdpr" : "" ) .'&username=' . urlencode($username) . '&password=' . urlencode(trim($password)) . '&from=' . urlencode($from) . '&to=' . urlencode($phone) . '&text=' . urlencode($message) . '&short=' . ($short ? 'true' : 'false'));
+            $status = $this->makeApiCall('https://api.sendsms.ro/json?action=message_send' . ($gdpr ? "_gdpr" : "") . '&username=' . urlencode($username) . '&password=' . urlencode(trim($password)) . '&from=' . urlencode($from) . '&to=' . urlencode($phone) . '&text=' . urlencode($message) . '&short=' . ($short ? 'true' : 'false'));
 
             # history
             Db::getInstance()->insert('ps_sendsms_history', array(
@@ -606,10 +601,48 @@ class PsSendSMS extends Module
                 'type' => $type,
                 'sent_on' => date('Y-m-d H:i:s')
             ));
+
+            if (!Configuration::hasKey('PS_SENDSMS_PRICE_PER_PHONE') || Configuration::get('PS_SENDSMS_PRICE_TIMEOUT') < date('Y-m-d H:i:s')) {
+                $results = $this->makeApiCall('https://api.sendsms.ro/json?action=route_check_price&username=' . urlencode($username) . '&password=' . urlencode($password) . '&to=' . urlencode($phone));
+                if ($results['details']['status'] === 64) {
+                    Configuration::updateValue('PS_SENDSMS_PRICE_PER_PHONE', $results['details']['cost']);
+                    Configuration::updateValue('PS_SENDSMS_PRICE_TIMEOUT', date('Y-m-d H:i:s', strtotime('+1 day')));
+                }
+            }
         }
     }
 
-    public function makeApiCall($url)
+    public function createBatch($fileUrl)
+    {
+        //TODO COMMENT THIS
+        // $start_time = "2970-01-01 02:00:00";
+        $start_time = "";
+        $name = 'Prestashop - ' . _PS_BASE_URL_ . ' - ' . uniqid();
+        $data = 'data=' . Tools::file_get_contents($fileUrl);
+        $username = Configuration::get('PS_SENDSMS_USERNAME');
+        $password = Configuration::get('PS_SENDSMS_PASSWORD');
+        if (empty($username) || empty($password)) {
+            return -1;
+        }
+        $result = $this->makeApiCall('https://api.sendsms.ro/json?action=batch_create&username=' . urlencode($username) . '&password=' . urlencode($password) . '&start_time=' . urlencode($start_time) . '&name=' . urlencode($name), $data);
+        if (!isset($result['status']) || $result['status'] < 0) {
+            error_log(json_encode($result));
+            return -2;
+        }
+
+        Db::getInstance()->insert('ps_sendsms_history', array(
+            'phone' => $this->l("Go to hub.sendsms.ro"),
+            'status' => isset($result['status']) ? pSQL($result['status']) : pSQL(''),
+            'message' => isset($result['message']) ? pSQL($result['message']) : pSQL(''),
+            'details' => isset($result['details']) ? pSQL($result['details']) : pSQL(''),
+            'content' => $this->l("We created your campaign. Go and check the batch called: ") . $name,
+            'type' => $this->l("Batch Campaign"),
+            'sent_on' => date('Y-m-d H:i:s')
+        ));
+        return 0;
+    }
+
+    public function makeApiCall($url, $post = null)
     {
         $curl = curl_init();
 
@@ -623,9 +656,13 @@ class PsSendSMS extends Module
         curl_setopt($curl, CURLOPT_URL, $url);
         curl_setopt($curl, CURLOPT_HTTPHEADER, array("Connection: keep-alive"));
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+        if ($post)
+        {
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $post);
+        }
         $status = curl_exec($curl);
+        curl_close($curl);
         $status = json_decode($status, true);
-
         return $status;
     }
 
@@ -679,19 +716,31 @@ class PsSendSMS extends Module
         return false;
     }
 
-    public function validatePhone($phone)
+    public function validatePhone($phone_number)
     {
-        $phone = preg_replace('/\D/', '', $phone);
-        if (Tools::substr($phone, 0, 1) == '0' && Tools::strlen($phone) == 10) {
-            $phone = '4'.$phone;
-        } elseif (Tools::substr($phone, 0, 1) != '0' && Tools::strlen($phone) == 9) {
-            $phone = '40'.$phone;
-        } elseif (Tools::strlen($phone) == 13 && Tools::substr($phone, 0, 2) == '00') {
-            $phone = Tools::substr($phone, 2);
+        if (empty($phone_number)) {return '';}
+        include 'cc.php';
+        $phone_number = $this->clearPhone($phone_number);
+        //Strip out leading zeros:
+        //this will check the country code and apply it if needed
+        $cc = Configuration::get('PS_SENDSMS_COUNTRYCODE', null, null, null, "INT");
+        if ($cc === "INT") {
+            return $phone_number;
         }
-        if (Tools::strlen($phone) < 11) {
-            return false;
+        $phone_number = ltrim($phone_number, '0');
+
+        if (!preg_match('/^' . $cc . '/', $phone_number)) {
+            $phone_number = $cc . $phone_number;
         }
-        return $phone;
+
+        return $phone_number;
+    }
+
+    public function clearPhone($phone_number)
+    {
+        $phone_number = str_replace(['+', '-'], '', filter_var($phone_number, FILTER_SANITIZE_NUMBER_INT));
+        //Strip spaces and non-numeric characters:
+        $phone_number = preg_replace("/[^0-9]/", "", $phone_number);
+        return $phone_number;
     }
 }

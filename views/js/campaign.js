@@ -66,7 +66,8 @@ $(document).ready(function() {
                 method: "sendCampaign",
                 all: all,
                 content: content,
-                phones: phones
+                phones: phones,
+                sendsms_security: sendsms_security,
             },
             dataType: 'json',
             success: function(data) {

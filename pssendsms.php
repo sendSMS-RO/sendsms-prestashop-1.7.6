@@ -50,7 +50,7 @@ class PsSendSMS extends Module
 
         $this->name = 'pssendsms';
         $this->tab = 'advertising_marketing';
-        $this->version = '1.0.12';
+        $this->version = '1.0.13';
         $this->author = 'Any Place Media SRL';
         $this->module_key = '01417c91c848ebbc67f458d260e61f98';
         $this->need_instance = 0;
@@ -614,7 +614,6 @@ class PsSendSMS extends Module
 
     public function createBatch($fileUrl)
     {
-        //TODO COMMENT THIS
         // $start_time = "2970-01-01 02:00:00";
         $start_time = "";
         $name = 'Prestashop - ' . _PS_BASE_URL_ . ' - ' . uniqid();
@@ -656,8 +655,7 @@ class PsSendSMS extends Module
         curl_setopt($curl, CURLOPT_URL, $url);
         curl_setopt($curl, CURLOPT_HTTPHEADER, array("Connection: keep-alive"));
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-        if ($post)
-        {
+        if ($post) {
             curl_setopt($curl, CURLOPT_POSTFIELDS, $post);
         }
         $status = curl_exec($curl);
@@ -718,7 +716,9 @@ class PsSendSMS extends Module
 
     public function validatePhone($phone_number)
     {
-        if (empty($phone_number)) {return '';}
+        if (empty($phone_number)) {
+            return '';
+        }
         include 'cc.php';
         $phone_number = $this->clearPhone($phone_number);
         //Strip out leading zeros:

@@ -12,13 +12,17 @@
  *  @license   AFL
  */
 
+include 'csrf.class.php';
 class AdminCampaign extends ModuleAdminController
 {
     protected $index;
     public $cookieManager;
+    private $csrf;
+
     public function __construct()
     {
         parent::__construct();
+        $this->csrf = new Csrf();
         $this->cookieManager = $this->context->cookie;
         $this->bootstrap = true;
 
@@ -27,7 +31,7 @@ class AdminCampaign extends ModuleAdminController
         $this->table = 'sendsms_campaign';
         $this->display = 'add';
 
-        $error = strval(Tools::getValue('error'));
+        $error = (string)(Tools::getValue('error'));
         if (!empty($error)) {
             $this->errors[] = Tools::displayError($this->module->l('The phone number is not valid'));
         }
@@ -44,6 +48,9 @@ class AdminCampaign extends ModuleAdminController
 
     public function renderForm()
     {
+        $token_id = $this->csrf->getTokenId();
+        $token_value = $this->csrf->getToken();
+
         $products = array();
         $productsDb = $this->getListOfProducts();
         $products = array_merge($products, $productsDb);
@@ -57,6 +64,10 @@ class AdminCampaign extends ModuleAdminController
                 'title' => $this->module->l('Filtering customers')
             ),
             'input' => array(
+                array(
+                    'type' => 'hidden',
+                    'name' => $token_id
+                ),
                 array(
                     'type' => 'date',
                     'label' => $this->module->l('Order start period'),
@@ -139,11 +150,12 @@ class AdminCampaign extends ModuleAdminController
         $this->fields_value['sendsms_amount'] = $amount;
         $this->fields_value['sendsms_products[]'] = $products;
         $this->fields_value['sendsms_billing_states[]'] = $billingStates;
+        $this->fields_value[$token_id] = $token_value;
 
         $this->cookieManager->__set('sendsms_period_start', $periodStart);
         $this->cookieManager->__set('sendsms_period_end', $periodEnd);
         $this->cookieManager->__set('sendsms_amount', $amount);
-        $this->cookieManager->__set('sendsms_products', (Configuration::get('PS_SENDSMS_PRODUCTS') ? Configuration::get('PS_SENDSMS_PRODUCTS') :""));
+        $this->cookieManager->__set('sendsms_products', (Configuration::get('PS_SENDSMS_PRODUCTS') ? Configuration::get('PS_SENDSMS_PRODUCTS') : ""));
         $this->cookieManager->__set('sendsms_billing_states', (Configuration::get('PS_SENDSMS_STATES') ? Configuration::get('PS_SENDSMS_STATES') : ""));
 
         $form1 = parent::renderForm();
@@ -232,6 +244,8 @@ class AdminCampaign extends ModuleAdminController
 
     public function setMedia($isNewTheme = false)
     {
+        $token_value = $this->csrf->getToken();
+        Media::addJsDefL('sendsms_security', $token_value);
         Media::addJsDefL('sendsms_var_name', $this->module->l(' remaining characters'));
         Media::addJsDefL('sendsms_price_per_phone', Configuration::get('PS_SENDSMS_PRICE_PER_PHONE', null, null, null, 0));
         Media::addJsDefL('sendsms_text_no_message', $this->module->l('Please enter a message first.'));
@@ -263,91 +277,98 @@ class AdminCampaign extends ModuleAdminController
     public function postProcess()
     {
         if (Tools::getValue('method') === 'sendCampaign') {
-            error_log("procesare ajax");
-            $sendsms_period_start = $this->cookieManager->__get('sendsms_period_start');
-            $sendsms_period_end = $this->cookieManager->__get('sendsms_period_end');
-            $sendsms_amount = $this->cookieManager->__get('sendsms_amount');
-            $sendsms_products = "";
-            $sendsms_billing_states = "";
-            if (!empty($this->cookieManager->__get('sendsms_products'))) {
-                $sendsms_products = explode(',', $this->cookieManager->__get('sendsms_products'));
-            }
-            if (!empty($this->cookieManager->__get('sendsms_billing_states'))) {
-                $sendsms_billing_states = explode(',', $this->cookieManager->__get('sendsms_billing_states'));
-            }
-            $all = Tools::getValue('all');
-            $content = Tools::getValue('content');
-            $phones = array();
-            if (empty($content)) {
-                die(json_encode(array('hasError' => true, 'error' => $this->module->l('Your message box is empty'))));
-            }
-            if ($all === "true") {
-                $this->filterPhones($sendsms_period_start, $sendsms_period_end, $sendsms_amount, $sendsms_products, $sendsms_billing_states, $phones);
+            if ($this->csrf->checkValid(true)) {
+                $sendsms_period_start = $this->cookieManager->__get('sendsms_period_start');
+                $sendsms_period_end = $this->cookieManager->__get('sendsms_period_end');
+                $sendsms_amount = $this->cookieManager->__get('sendsms_amount');
+                $sendsms_products = "";
+                $sendsms_billing_states = "";
+                if (!empty($this->cookieManager->__get('sendsms_products'))) {
+                    $sendsms_products = explode(',', $this->cookieManager->__get('sendsms_products'));
+                }
+                if (!empty($this->cookieManager->__get('sendsms_billing_states'))) {
+                    $sendsms_billing_states = explode(',', $this->cookieManager->__get('sendsms_billing_states'));
+                }
+                $all = Tools::getValue('all');
+                $content = Tools::getValue('content');
+                $phones = array();
+                if (empty($content)) {
+                    die(json_encode(array('hasError' => true, 'error' => $this->module->l('Your message box is empty'))));
+                }
+                if ($all === "true") {
+                    $this->filterPhones($sendsms_period_start, $sendsms_period_end, $sendsms_amount, $sendsms_products, $sendsms_billing_states, $phones);
+                } else {
+                    if (Tools::getValue('phones') != "") {
+                        $phones = explode(',', Tools::getValue('phones', false));
+                    }
+                }
+                if (count($phones) === 0) {
+                    die(json_encode(array('hasError' => true, 'error' => $this->module->l('Please select at least one phone number'))));
+                }
+                $fileUrl = _PS_MODULE_DIR_ . $this->module->name . "/batches/batch.csv";
+                $file = fopen($fileUrl, "w");
+                if ($file) {
+                    $from = Configuration::get('PS_SENDSMS_LABEL');
+                    if (empty($from)) {
+                        die(json_encode(array('hasError' => true, 'error' => $this->module->l('Please add a label in the configuration page'))));
+                    }
+                    $headers = array(
+                        "message",
+                        "to",
+                        "from"
+                    );
+                    fputcsv($file, $headers);
+                    foreach ($phones as $phone) {
+                        fputcsv($file, array(
+                            $content,
+                            $this->module->validatePhone($phone),
+                            $from
+                        ), ',', '"', "\0");
+                    }
+                    $result = $this->module->createBatch($fileUrl);
+                    fclose($file);
+                    if (!unlink($fileUrl)) {
+                        die(json_encode(array('hasError' => true, 'error' => $this->module->l("Unable to delete the batch file! Please check file/folder permisions ($fileUrl)"))));
+                    }
+                    if ($result === 0) {
+                        die(json_encode(array('response' => $this->module->l('Success'))));
+                    } elseif ($result === -1) {
+                        die(json_encode(array('hasError' => true, 'error' => $this->module->l('Please check your username/password/label.'))));
+                    } elseif ($result === -2) {
+                        die(json_encode(array('hasError' => true, 'error' => $this->module->l('Batch sending error. Check your php error_log file'))));
+                    }
+                } else {
+                    die(json_encode(array('hasError' => true, 'error' => "Unable to open/create batch file! Please check file/folder permisions ($fileUrl)")));
+                }
             } else {
-                if (Tools::getValue('phones') != "") {
-                    $phones = explode(',', Tools::getValue('phones', false));
-                }
-            }
-            if (count($phones) === 0) {
-                die(json_encode(array('hasError' => true, 'error' => $this->module->l('Please select at least one phone number'))));
-            }
-            $fileUrl = _PS_MODULE_DIR_ . $this->module->name . "/batches/batch.csv";
-            $file = fopen($fileUrl, "w");
-            if ($file) {
-                $from = Configuration::get('PS_SENDSMS_LABEL');
-                if (empty($from)) {
-                    die(json_encode(array('hasError' => true, 'error' => $this->module->l('Please add a label in the configuration page'))));
-                }
-                $headers = array(
-                    "message",
-                    "to",
-                    "from"
-                );
-                fputcsv($file, $headers);
-                foreach ($phones as $phone) {
-                    fputcsv($file, array(
-                        $content,
-                        $this->module->validatePhone($phone),
-                        $from
-                    ), ',', '"', "\0");
-                }
-                $result = $this->module->createBatch($fileUrl);
-                fclose($file);
-                if (!unlink($fileUrl)) {
-                    die(json_encode(array('hasError' => true, 'error' => $this->module->l("Unable to delete the batch file! Please check file/folder permisions ($fileUrl)"))));
-                }
-                if ($result === 0) {
-                    die(json_encode(array('response' => $this->module->l('Success'))));
-                } elseif ($result === -1) {
-                    die(json_encode(array('hasError' => true, 'error' => $this->module->l('Please check your username/password/label.'))));
-                } elseif ($result === -2) {
-                    die(json_encode(array('hasError' => true, 'error' => $this->module->l('Batch sending error. Check your php error_log file'))));
-                }
-            } else {
-                die(json_encode(array('hasError' => true, 'error' => "Unable to open/create batch file! Please check file/folder permisions ($fileUrl)")));
+                die(json_encode(array('hasError' => true, 'error' => "Invalid CSRF token!")));
             }
         }
         if (Tools::isSubmit('submitAdd' . $this->table)) {
-            $periodStart = (string)(Tools::getValue('sendsms_period_start'));
-            $periodEnd = (string)(Tools::getValue('sendsms_period_end'));
-            $amount = (string)(Tools::getValue('sendsms_amount'));
-            Configuration::updateValue('PS_SENDSMS_START_PERIOD', $periodStart, true);
-            Configuration::updateValue('PS_SENDSMS_END_PERIOD', $periodEnd, true);
-            Configuration::updateValue('PS_SENDSMS_ORDER_AMOUNT', $amount, true);
-            if (Tools::getValue('sendsms_products')) {
-                Configuration::updateValue('PS_SENDSMS_PRODUCTS', implode(',', Tools::getValue('sendsms_products')), true);
+            if ($this->csrf->checkValid()) {
+                $periodStart = (string)(Tools::getValue('sendsms_period_start'));
+                $periodEnd = (string)(Tools::getValue('sendsms_period_end'));
+                $amount = (string)(Tools::getValue('sendsms_amount'));
+                Configuration::updateValue('PS_SENDSMS_START_PERIOD', $periodStart, true);
+                Configuration::updateValue('PS_SENDSMS_END_PERIOD', $periodEnd, true);
+                Configuration::updateValue('PS_SENDSMS_ORDER_AMOUNT', $amount, true);
+                if (Tools::getValue('sendsms_products')) {
+                    Configuration::updateValue('PS_SENDSMS_PRODUCTS', implode(',', Tools::getValue('sendsms_products')), true);
+                } else {
+                    Configuration::updateValue('PS_SENDSMS_PRODUCTS', null);
+                }
+                if (Tools::getValue('sendsms_billing_states')) {
+                    Configuration::updateValue('PS_SENDSMS_STATES', implode(',', Tools::getValue('sendsms_billing_states')), true);
+                } else {
+                    Configuration::updateValue('PS_SENDSMS_STATES', null);
+                }
+                Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token);
             } else {
-                Configuration::updateValue('PS_SENDSMS_PRODUCTS', null);
+                $this->errors[] = Tools::displayError($this->module->l('Invalid CSRF token!'));
             }
-            if (Tools::getValue('sendsms_billing_states')) {
-                Configuration::updateValue('PS_SENDSMS_STATES', implode(',', Tools::getValue('sendsms_billing_states')), true);
-            } else {
-                Configuration::updateValue('PS_SENDSMS_STATES', null);
-            }
-            Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token);
         }
     }
-
+    
     private function filterPhones($periodStart, $periodEnd, $amount, $products, $billingStates, &$phones = array())
     {
         $sql = new DbQuery();

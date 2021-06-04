@@ -12,14 +12,16 @@
  *  @license   AFL
  */
 
+include 'csrf.class.php';
 class AdminSendTest extends ModuleAdminController
 {
     protected $index;
-
+    private $csrf;
     public function __construct()
     {
         parent::__construct();
 
+        $this->csrf = new Csrf();
         $this->table = 'sendsms_test';
         $this->bootstrap = true;
         $this->meta_title = $this->module->l('Send a test SMS');
@@ -34,11 +36,17 @@ class AdminSendTest extends ModuleAdminController
 
     public function renderForm()
     {
+        $token_id = $this->csrf->getTokenId();
+        $token_value = $this->csrf->getToken();
         $this->fields_form = array(
             'legend' => array(
                 'title' => $this->module->l('Send a test')
             ),
             'input' => array(
+                array(
+                    'type' => 'hidden',
+                    'name' => $token_id
+                ),
                 array(
                     'type' => 'text',
                     'label' => $this->module->l('Phone number'),
@@ -94,6 +102,9 @@ class AdminSendTest extends ModuleAdminController
             )
         );
 
+        $this->fields_value[$token_id] = $token_value;
+
+
         Media::addJsDefL('sendsms_var_name', $this->module->l(' remaining characters'));
 
         $this->context->controller->addJS(
@@ -106,21 +117,25 @@ class AdminSendTest extends ModuleAdminController
     public function postProcess()
     {
         if (Tools::isSubmit('submitAdd' . $this->table)) {
-            $phone = (string)(Tools::getValue('sendsms_phone'));
-            $message = (string)(Tools::getValue('sendsms_message'));
-            $phone = Validate::isPhoneNumber($phone) ? $phone : "";
-            $short = Tools::getValue('sendsms_url_') ? true : false;
-            $gdpr = Tools::getValue('sendsms_gdpr_') ? true : false;
+            if ($this->csrf->checkValid()) {
+                $phone = (string)(Tools::getValue('sendsms_phone'));
+                $message = (string)(Tools::getValue('sendsms_message'));
+                $phone = Validate::isPhoneNumber($phone) ? $phone : "";
+                $short = Tools::getValue('sendsms_url_') ? true : false;
+                $gdpr = Tools::getValue('sendsms_gdpr_') ? true : false;
 
-            if (!empty($phone) && !empty($message)) {
-                $this->module->sendSms($message, 'test', $phone, $short, $gdpr);
-                Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token);
-            } else {
-                if (empty($phone)) {
-                    $this->errors[] = Tools::displayError($this->module->l('The phone number is not valid'));
-                } elseif (empty($message)) {
-                    $this->errors[] = Tools::displayError($this->module->l('Please enter e message'));
+                if (!empty($phone) && !empty($message)) {
+                    $this->module->sendSms($message, 'test', $phone, $short, $gdpr);
+                    Tools::redirectAdmin(self::$currentIndex . '&conf=' . $this->index . '&token=' . $this->token);
+                } else {
+                    if (empty($phone)) {
+                        $this->errors[] = Tools::displayError($this->module->l('The phone number is not valid'));
+                    } elseif (empty($message)) {
+                        $this->errors[] = Tools::displayError($this->module->l('Please enter e message'));
+                    }
                 }
+            } else {
+                $this->errors[] = Tools::displayError($this->module->l('Invalid CSRF token!'));
             }
         }
     }

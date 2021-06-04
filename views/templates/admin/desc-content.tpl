@@ -11,4 +11,4 @@
  *  @license   AFL 
  *}
 
-<div>{$example}</div>
+<div>{$example|escape:'htmlall':'UTF-8'}</div>

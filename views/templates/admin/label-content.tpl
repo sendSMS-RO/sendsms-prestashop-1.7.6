@@ -11,7 +11,7 @@
  *  @license   AFL 
  *}
 
-{l s='Message: ' mod='pssendsms'}{$status_name}<br /><br />{l s='Available variables:' mod='pssendsms'}
+{l s='Message: ' mod='pssendsms'}{$status_name|escape:'htmlall':'UTF-8'}<br /><br />{l s='Available variables:' mod='pssendsms'}
 {literal}
     <button type="button" class="ps_sendsms_button">{billing_first_name}</button>
     <button type="button" class="ps_sendsms_button">{billing_last_name}</button>

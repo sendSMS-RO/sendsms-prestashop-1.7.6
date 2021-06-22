@@ -2,7 +2,7 @@
 <module>
 	<name>pssendsms</name>
 	<displayName><![CDATA[SendSMS]]></displayName>
-	<version><![CDATA[1.0.13]]></version>
+	<version><![CDATA[1.0.14]]></version>
 	<description><![CDATA[Use our SMS shipping solution to deliver the right information at the right time.]]></description>
 	<author><![CDATA[Any Place Media SRL]]></author>
 	<tab><![CDATA[advertising_marketing]]></tab>

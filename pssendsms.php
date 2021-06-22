@@ -17,6 +17,7 @@ use PrestaShopBundle\Entity\Repository\TabRepositoryp;
 if (!defined('_PS_VERSION_')) {
     exit;
 }
+include "cc.php";
 
 class PsSendSMS extends Module
 {
@@ -50,7 +51,7 @@ class PsSendSMS extends Module
 
         $this->name = 'pssendsms';
         $this->tab = 'advertising_marketing';
-        $this->version = '1.0.13';
+        $this->version = '1.0.14';
         $this->author = 'Any Place Media SRL';
         $this->module_key = '01417c91c848ebbc67f458d260e61f98';
         $this->need_instance = 0;
@@ -238,8 +239,8 @@ class PsSendSMS extends Module
 
     public function displayForm()
     {
-        include "cc.php";
-
+        $sendsmscc = new SendSMSCC();
+        $country_codes = $sendsmscc->country_codes;
         // Get default language
         $default_lang = (int)Configuration::get('PS_LANG_DEFAULT');
 
@@ -719,7 +720,7 @@ class PsSendSMS extends Module
         if (empty($phone_number)) {
             return '';
         }
-        include 'cc.php';
+
         $phone_number = $this->clearPhone($phone_number);
         //Strip out leading zeros:
         //this will check the country code and apply it if needed
